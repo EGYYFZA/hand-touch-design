@@ -1,0 +1,54 @@
+# Semua angka yang bisa disetel. Ubah di sini, jangan di dalam kode.
+
+camera:
+  index: 0
+  width: 1280
+  height: 720
+  fps: 30
+  mirror: true          # tampilkan seperti cermin, lebih alami untuk dikendalikan
+
+tracker:
+  max_hands: 2
+  detection_confidence: 0.6
+  tracking_confidence: 0.5
+
+smoothing:              # One Euro filter untuk landmark
+  enabled: true
+  min_cutoff: 0.7       # makin kecil makin halus saat diam, tapi makin lambat
+  beta: 0.012           # makin besar makin responsif saat bergerak cepat
+
+face:                   # deteksi wajah, hanya menyala di mode meme
+  detection_confidence: 0.5
+  tracking_confidence: 0.5
+  every: 2              # olah wajah tiap N frame; naikkan kalau meme terasa berat
+
+engine:                 # histeresis, dalam satuan frame
+  enter_frames: 3       # berapa frame stabil sebelum pose diakui
+  exit_frames: 10       # berapa frame hilang sebelum pose dilepas
+
+roi:                    # daerah efek yang dibentuk jari
+  min_size: 120         # piksel; daerah lebih kecil dari ini dilebarkan
+  padding_ratio: 0.15   # kelonggaran di luar ujung jari, dikali ukuran telapak
+
+shape:                  # tepi daerah efek
+  feather: 17           # kelembutan tepi, piksel; 0 = tepi tajam
+  smoothing: 0.55       # 0 = ikut tangan seketika tapi bergetar,
+                        # 0.9 = sangat halus tapi terasa berat
+
+menu:                   # memilih menu dengan ketukan dua jari
+  tap_close: 0.35       # jarak telunjuk-tengah dianggap "dirapatkan" (disatukan)
+  tap_open: 0.70        # lalu "direnggangkan" -> ketukan menyala
+
+meme:                   # gambar muncul saat ekspresi + gestur cocok
+  smile: 0.35           # ambang senyum (idea & clingy)
+  shock: 0.35           # ambang wajah kaget (mulut menganga + mata lebar)
+  tongue: 0.45          # ambang lidah menjulur (dari warna, bisa perlu disetel)
+  near_mouth: 0.75      # jarak jari ke mulut untuk 'clingy', kali lebar wajah
+  hold_seconds: 0.18    # lama pemicu bertahan sebelum gambar muncul
+  release_margin: 0.6   # gambar hilang saat skor turun di bawah ambang x ini
+
+paths:
+  model: models/pose_model.joblib
+  labels: models/labels.json
+  assets: assets
+  captures: captures

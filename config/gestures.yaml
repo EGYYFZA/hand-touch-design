@@ -1,0 +1,27 @@
+# Peta gesture -> efek. Ubah di sini, jangan di dalam kode.
+#
+# Pose satu tangan yang dikenali:
+#   peace, fist, open_palm, point, pinch, l_up, l_down, none
+# l_up   = jempol + telunjuk membentuk L, telunjuk mengarah ke atas
+# l_down = L yang sama tapi terbalik (telunjuk mengarah ke bawah)
+#
+# Efek dua tangan bekerja pada daerah yang dibentuk UJUNG JARI YANG LURUS,
+# bukan kotak tetap. Buka lebih banyak jari untuk daerah yang lebih lebar,
+# miringkan tangan untuk memiringkan daerahnya.
+
+single_hand:
+  peace:
+    effect: blur_full
+    params: { min_radius: 9, max_radius: 61 }
+
+two_hands:
+  # kunci = pasangan pose kedua tangan, urutan tidak diperhatikan
+  l_up + l_up:
+    effect: blur_box
+    params: { radius: 45 }
+  l_up + l_down:
+    effect: mosaic_box
+    params: { blocks: 18 }
+  l_down + l_down:
+    effect: flip_box       # diputar 180 derajat penuh
+    params: {}
