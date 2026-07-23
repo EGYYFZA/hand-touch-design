@@ -1,0 +1,16 @@
+# Menu navigasi di rel kiri. `id` harus cocok dengan id mode di modes/.
+
+items:
+  - { id: free,       label: "Efek Tangan" }
+  - { id: painting,   label: "Painting" }
+  - { id: photobooth, label: "Photobooth" }
+  - { id: meme,       label: "Meme" }
+
+# Palet mode painting, urutan BGR (bukan RGB - ini OpenCV).
+palette:
+  - [80, 120, 240]      # merah-oranye
+  - [70, 180, 250]      # kuning
+  - [90, 200, 90]       # hijau
+  - [230, 170, 60]      # biru
+  - [200, 120, 210]     # ungu
+  - [40, 40, 40]        # hitam
