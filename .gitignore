@@ -1,0 +1,19 @@
+
+# Local configuration and generated files
+.env
+.env.*
+!.env.example
+!.env.sample
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.tsbuildinfo
+.vercel/
+*.log
+.DS_Store
+Thumbs.db
+
+# Camera captures stay on the local machine
+/captures/
