@@ -1,5 +1,5 @@
 # MediaPipe hanya mendukung Python 3.9 - 3.12.
-opencv-python>=4.8,<5
+opencv-python>=5.0.0.93,<6
 mediapipe>=0.10.9,<0.11
 numpy>=1.24,<2
 PyYAML>=6.0
