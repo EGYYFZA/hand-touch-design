@@ -15,7 +15,7 @@ Semua pemrosesan berjalan lokal di CPU; hasil gambar disimpan ke folder
 **Sekali di awal** — siapkan lingkungan:
 
 ```powershell
-cd c:\Users\prass\OneDrive\Documents\PHappy
+cd hand-touch-design
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --upgrade pip
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
@@ -27,7 +27,7 @@ terminal baru dan cek dengan `py -0p`.
 **Setiap kali menjalankan:**
 
 ```powershell
-cd c:\Users\prass\OneDrive\Documents\PHappy
+cd hand-touch-design
 .\.venv\Scripts\python.exe app.py
 ```
 
@@ -241,3 +241,6 @@ lalu sebut namanya di `config/gestures.yaml`. Pipeline tidak perlu disentuh.
   tangan kanan lalu landmark melompat.
 - Nama aset yang berasal dari config disaring supaya tidak bisa keluar dari
   folder `assets/`.
+## Privacy and security
+
+Camera captures and virtual environments stay local and are ignored by Git. Use only trusted model files. See [SECURITY.md](SECURITY.md).
