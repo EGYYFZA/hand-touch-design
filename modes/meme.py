@@ -54,27 +54,26 @@ def _triggers(state: GestureState, cfg: dict) -> dict[str, float]:
     shock = face.shocked
 
     # idea: ada tangan dengan telunjuk teracung ke atas, sambil senyum
-    if smile >= cfg["smile"]:
+    if smile > 0:
         for h in hands:
             if F.index_points_up(h.points):
-                scores["idea"] = float(min(1.0, 0.5 + 0.5 * smile))
+                scores["idea"] = float(smile)
                 break
 
     # tongue: lidah menjulur (dari warna mulut)
-    if face.tongue >= cfg["tongue"]:
-        scores["tongue"] = float(face.tongue)
+    scores["tongue"] = float(face.tongue)
 
     # clingy: satu jari dekat mulut + senyum
-    if smile >= cfg["smile"] and face.mouth_center is not None:
+    if face.mouth_center is not None:
         near = cfg["near_mouth"] * face.face_width
         for h in hands:
             tip = np.asarray(h.index_tip, dtype=float)
             if float(np.linalg.norm(tip - face.mouth_center)) < near:
-                scores["clingy"] = float(min(1.0, 0.5 + 0.5 * smile))
+                scores["clingy"] = float(smile)
                 break
 
     # shock: dua tangan di bawah mulut (setinggi dada) + wajah kaget
-    if shock >= cfg["shock"] and face.mouth_center is not None and len(hands) >= 2:
+    if face.mouth_center is not None and len(hands) >= 2:
         my = float(face.mouth_center[1])
         below = [h for h in hands if float(h.points[0][1]) > my]
         if len(below) >= 2:
@@ -92,38 +91,40 @@ class MemeMode(Mode):
         super().__init__(ctx)
         self.cfg = {**DEFAULTS, **(ctx.settings.get("meme") or {})}
         self.scale = 0.42               # tinggi meme relatif tinggi frame
-        self.show_meter = True
+        self.show_meter = False
         self._scores: dict[str, float] = {}
         self._showing: str | None = None
         self._since: float | None = None
+        self._candidate: str | None = None
         self._missing: set[str] = set()
+        self._face_present = False
 
     def on_enter(self) -> None:
         self._showing = None
         self._since = None
+        self._candidate = None
 
     def update(self, frame: np.ndarray, state: GestureState) -> np.ndarray:
         now = time.perf_counter()
         self._scores = _triggers(state, self.cfg)
+        self._face_present = state.face is not None
 
-        best = max(self._scores, key=self._scores.get) if self._scores else None
-        best_score = self._scores.get(best, 0.0) if best else 0.0
+        eligible = {name: score for name, score in self._scores.items()
+                    if score >= self._threshold(name)}
+        best = max(eligible, key=eligible.get) if eligible else None
+        if self._showing is not None:
+            keep = self._threshold(self._showing) * self.cfg["release_margin"]
+            if self._scores.get(self._showing, 0.0) < keep:
+                self._showing = None
 
-        # muncul setelah pemicu bertahan sesaat; bertahan sampai skornya jatuh
-        # cukup jauh di bawah ambang, supaya gambar tidak berkedip
-        threshold = self._threshold(best) if best else 1.0
-        if best and best_score >= threshold:
-            if self._showing != best:
-                self._since = self._since or now
-                if now - self._since >= self.cfg["hold_seconds"]:
-                    self._showing = best
-                    self._since = None
+        if best is not None and best != self._showing:
+            if best != self._candidate:
+                self._candidate, self._since = best, now
+            if now - self._since >= self.cfg["hold_seconds"]:
+                self._showing = best
+                self._candidate, self._since = None, None
         else:
-            self._since = None
-            if self._showing is not None:
-                keep = self._threshold(self._showing) * self.cfg["release_margin"]
-                if self._scores.get(self._showing, 0.0) < keep:
-                    self._showing = None
+            self._candidate, self._since = None, None
 
         if self._showing:
             frame = self._draw_meme(frame)
@@ -199,11 +200,10 @@ class MemeMode(Mode):
         return "-"
 
     def hint(self) -> str:
-        return ("telunjuk ke atas + senyum = idea   |   melet lidah = bleh   |   "
-                "jari di mulut + senyum = malu   |   dua tangan + kaget = shock")
+        return "Telunjuk + senyum: ide | Lidah: bleh | Jari di mulut: malu | Dua tangan: kaget"
 
     def status(self) -> str:
-        ready = "wajah ok" if self._scores else "-"
+        ready = "wajah terdeteksi" if self._face_present else "wajah belum terlihat"
         return f"meme: {self._showing or '-'}  ({ready})"
 
     def handle_key(self, key: int) -> None:
@@ -214,5 +214,5 @@ class MemeMode(Mode):
         elif key in (ord("-"), ord("_")):
             self.scale = max(0.2, self.scale - 0.04)
 
-    def snapshot(self, frame: np.ndarray) -> tuple[np.ndarray, dict]:
+    def snapshot(self, frame: np.ndarray | None) -> tuple[np.ndarray | None, dict]:
         return frame, {"mode": self.id, "meme": self._showing}

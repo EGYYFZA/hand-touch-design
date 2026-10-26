@@ -12,6 +12,29 @@ SUFFIXES = (".png", ".webp", ".jpg", ".jpeg")
 # 2160x2160 memakan ~18 MB per gambar di memori dan memperlambat resize tiap
 # frame. Dikecilkan sekali saat dibaca.
 MAX_SIDE = 768
+MEME_LABELS = {"idea": "IDE!", "tongue": "BLEH!", "clingy": "MALU", "shock": "KAGET!"}
+
+
+def _meme_card(name: str) -> np.ndarray:
+    """Stiker asli proyek; tidak memerlukan foto atau aset pihak ketiga."""
+    image = np.zeros((320, 320, 4), dtype=np.uint8)
+    color = {"idea": (185, 230, 161, 255), "tongue": (160, 199, 245, 255),
+             "clingy": (206, 181, 236, 255), "shock": (229, 210, 161, 255)}[name]
+    ink = (38, 45, 35, 255)
+    cv2.circle(image, (160, 140), 102, color, -1, cv2.LINE_AA)
+    cv2.circle(image, (160, 140), 102, ink, 3, cv2.LINE_AA)
+    for x in (126, 194):
+        cv2.circle(image, (x, 121), 8, ink, -1, cv2.LINE_AA)
+    if name == "shock":
+        cv2.ellipse(image, (160, 173), (16, 22), 0, 0, 360, ink, 3, cv2.LINE_AA)
+    else:
+        cv2.ellipse(image, (160, 150), (38, 35), 0, 15, 165, ink, 3, cv2.LINE_AA)
+        if name == "tongue":
+            cv2.ellipse(image, (160, 185), (15, 20), 0, 0, 360, (105, 100, 227, 255), -1, cv2.LINE_AA)
+    label = MEME_LABELS[name]
+    (width, _), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 1.1, 3)
+    cv2.putText(image, label, ((320 - width) // 2, 293), cv2.FONT_HERSHEY_SIMPLEX, 1.1, ink, 3, cv2.LINE_AA)
+    return image
 
 
 def _placeholder(size: int = 220) -> np.ndarray:
@@ -65,6 +88,8 @@ class AssetLibrary:
                     image = _shrink(_to_bgra(raw))
                 break
 
+        if image is None and category == "memes" and name in MEME_LABELS:
+            image = _meme_card(name)
         if image is None and name == "default":
             image = _placeholder()
 

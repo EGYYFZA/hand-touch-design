@@ -1,0 +1,30 @@
+{
+  "contract": "../ui-contract.md: OpenCV desktop studio, 1120x704 and 960x640, keyboard controls, retained failed captures, contrast and reduced-motion checks.",
+  "targetViewports": ["1120x704", "960x640"],
+  "accessibility": {
+    "status": "pass",
+    "evidence": "Local regression tests cover Tab/Enter dispatch, visible focus state, 44px targets and 4.5:1 text contrast. Renderer screenshots were inspected. This is a pixel UI: native screen-reader semantics are unavailable and are not claimed. OS keyboard event delivery remains a manual check."
+  },
+  "responsive": {
+    "status": "pass",
+    "evidence": "Both target canvases were rendered and inspected. Status/button overlap found at 960x640 was corrected. Assertions cover control bounds, hit targets, square-frame letterboxing, long hints and disabled interpolation in reduced-motion mode."
+  },
+  "contentStates": {
+    "loading": {"status": "pass", "evidence": "Loading renderer keeps the stage and navigation in place with a preparing-camera label and no save button."},
+    "empty": {"status": "pass", "evidence": "All four modes render synthetic frames without detected hands; the stage offers a hand instruction and keyboard/mouse controls."},
+    "error": {"status": "pass", "evidence": "Tests reproduce a failed capture and disk-full save, verify stale-frame expiry, pause, retry and retained Photobooth shots. Camera and save-error screenshots show recovery actions."},
+    "partial": {"status": "pass", "evidence": "Meme mode without a face renders the preview and controls and explicitly reports wajah belum terlihat; no-face status has a regression test."},
+    "success": {"status": "pass", "evidence": "The export retry test writes PNG and JSON and returns Photobooth to review. The success screenshot shows confirmation and available next actions."},
+    "permission": {"status": "untested", "evidence": "The unavailable-camera screen was rendered and start-denial/retry behavior was tested with a simulated exception. The real device-open attempt found no camera in this session, so an actual Windows permission denial could not be exercised."}
+  },
+  "renderedEvidence": [
+    {"viewport": "1120x704", "artifact": "free-1120x704.png", "observation": "Primary workspace with synthetic camera input, dark sidebar, active/focused mode, retained image aspect ratio and save action."},
+    {"viewport": "960x640", "artifact": "painting-960x640.png", "observation": "Compact workspace with a gesture palette and painting strokes. Navigation, hint, status and save action stay separate."},
+    {"viewport": "960x640", "artifact": "save-error-960x640.png", "observation": "Failed save retains the three-shot strip and displays retry and discard with an explicit error."},
+    {"viewport": "1120x704", "artifact": "camera-error-1120x704.png", "observation": "Unavailable-camera renderer replaces the stale preview with a persistent recovery screen."},
+    {"viewport": "960x640", "artifact": "loading-960x640.png", "observation": "Preparing-camera renderer keeps a stable workspace without a save action."},
+    {"viewport": "1120x704", "artifact": "meme-1120x704.png", "observation": "Meme workspace with no detected face; status is readable outside the preview and the optional M expression meter stays hidden by default."},
+    {"viewport": "1120x704", "artifact": "success-1120x704.png", "observation": "Saved strip review and confirmation. Frame content is synthetic; no personal camera capture was persisted."},
+    {"viewport": "960x640", "artifact": "permission-960x640.png", "observation": "Simulated access-failure message with recovery button; this is renderer evidence, not a real OS permission test."}
+  ]
+}

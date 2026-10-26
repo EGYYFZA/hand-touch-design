@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import numpy as np
 
@@ -58,6 +59,15 @@ class Mode:
     def handle_key(self, key: int) -> None:
         """Tombol yang tidak ditangani pipeline. Hanya tombol nyata yang masuk."""
 
-    def snapshot(self, frame: np.ndarray) -> tuple[np.ndarray, dict]:
+    def actions(self) -> list[tuple[str, int]]:
+        return [("Simpan gambar", ord("s"))]
+
+    def on_saved(self, path: Path) -> None:
+        """Mode dapat memperbarui status setelah ekspor berhasil."""
+
+    def on_camera_wait(self, seconds: float) -> None:
+        """Jeda pekerjaan yang memerlukan frame kamera baru."""
+
+    def snapshot(self, frame: np.ndarray | None) -> tuple[np.ndarray | None, dict]:
         """Citra bersih untuk disimpan + metadata. Frame yang masuk tanpa HUD."""
         return frame, {"mode": self.id}

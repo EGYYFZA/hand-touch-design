@@ -12,6 +12,7 @@ import numpy as np
 class Exporter:
     def __init__(self, directory: str | Path = "captures") -> None:
         self.directory = Path(directory)
+        self.last_saved: Path | None = None
 
     def save(self, image: np.ndarray, meta: dict | None = None) -> Path:
         """Tulis PNG (+ sidecar .json kalau ada meta). -> path file gambar."""
@@ -28,4 +29,5 @@ class Exporter:
             path.with_suffix(".json").write_text(
                 json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8"
             )
+        self.last_saved = path
         return path

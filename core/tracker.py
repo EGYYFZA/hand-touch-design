@@ -167,6 +167,9 @@ class HandTracker:
             hands.append(HandData(points=pts, handedness=label, score=score,
                                   meta={"key": key}))
 
+        for key, smoothing_filter in self._filters.items():
+            if key not in used:
+                smoothing_filter.reset()
         return hands
 
     def close(self) -> None:
