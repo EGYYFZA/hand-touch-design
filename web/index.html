@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Studio kamera dengan gestur tangan. Ambil foto, simpan, dan cetak langsung dari browser.">
+  <meta name="theme-color" content="#1f2b27">
+  <title>GestureCanvas — Studio Kamera</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#workspace">Langsung ke studio</a>
+  <aside class="sidebar">
+    <a class="brand" href="./" aria-label="GestureCanvas, beranda"><span class="brand-mark" aria-hidden="true">╱</span><span>Gesture<span>Canvas</span></span></a>
+    <p class="eyebrow">PILIH MODE</p>
+    <nav aria-label="Mode studio">
+      <button class="mode active" data-mode="free" aria-pressed="true"><span class="mode-icon" aria-hidden="true">☷</span><span>Efek Tangan<small>Blur & mosaik</small></span><kbd>1</kbd></button>
+      <button class="mode" data-mode="painting" aria-pressed="false"><span class="mode-icon" aria-hidden="true">╱</span><span>Painting<small>Kanvas bebas</small></span><kbd>2</kbd></button>
+      <button class="mode" data-mode="photobooth" aria-pressed="false"><span class="mode-icon" aria-hidden="true">▣</span><span>Photobooth<small>3 foto, 1 strip</small></span><kbd>3</kbd></button>
+      <button class="mode" data-mode="meme" aria-pressed="false"><span class="mode-icon" aria-hidden="true">☺</span><span>Meme<small>Ekspresi wajah</small></span><kbd>4</kbd></button>
+    </nav>
+    <div class="sidebar-footer"><p class="eyebrow">KONTROL CEPAT</p><p><kbd>S</kbd> Ambil foto <kbd>P</kbd> Print</p><p><kbd>Spasi</kbd> Mulai photobooth</p><a href="https://github.com/EGYYFZA/hand-touch-design" target="_blank" rel="noopener noreferrer">Kode sumber ↗</a></div>
+  </aside>
+  <main id="workspace">
+    <header><div><p class="eyebrow">STUDIO KREATIF · DI BROWSER ANDA</p><h1 id="mode-title">Efek Tangan</h1><p id="mode-description">Peace untuk blur. Dua tangan L untuk efek area.</p></div><span id="camera-state" class="badge">Kamera belum aktif</span></header>
+    <section class="stage" aria-label="Pratinjau kamera">
+      <video id="video" autoplay muted playsinline hidden></video>
+      <canvas id="preview" width="1280" height="720" aria-label="Pratinjau hasil kamera"></canvas>
+      <div id="empty-state" class="empty-state"><span class="camera-symbol" aria-hidden="true">▣</span><h2>Ruang untuk gerakan Anda.</h2><p id="camera-message">Aktifkan kamera untuk mulai. Foto diproses di perangkat Anda.</p><button id="start-camera" class="primary">Aktifkan kamera</button></div>
+      <div id="countdown" class="countdown" aria-live="assertive" hidden></div>
+      <div class="stage-status"><span id="tracking-state">Kamera hanya aktif setelah Anda mengizinkan.</span><span id="fps"></span></div>
+    </section>
+    <div class="studio-toolbar">
+      <div id="effects" class="control-group" aria-label="Pilih efek"><button data-effect="auto" aria-pressed="true">Gestur otomatis</button><button data-effect="none" aria-pressed="false">Normal</button><button data-effect="blur" aria-pressed="false">Blur</button><button data-effect="mosaic" aria-pressed="false">Mosaik</button><button data-effect="flip" aria-pressed="false">Putar</button></div>
+      <div id="paint-tools" class="control-group" hidden><label>Warna <input id="paint-color" type="color" value="#ef7850"></label><label>Kuas <input id="brush-size" type="range" min="2" max="40" value="8"></label><button id="eraser" aria-pressed="false">Penghapus</button><button id="clear-paint">Bersihkan</button></div>
+      <div id="meme-tools" class="control-group" hidden><button data-meme="auto" aria-pressed="true">Ekspresi otomatis</button><button data-meme="idea" aria-pressed="false">Ide!</button><button data-meme="tongue" aria-pressed="false">Bleh!</button><button data-meme="clingy" aria-pressed="false">Malu</button><button data-meme="shock" aria-pressed="false">Kaget!</button></div>
+    </div>
+    <div class="hint"><p class="eyebrow">PETUNJUK</p><p id="hint">Pakai gestur atau tombol efek. Mouse dan keyboard tetap tersedia.</p></div>
+    <div id="feedback" class="feedback" role="status" aria-live="polite">Siap saat Anda siap.</div>
+    <div class="actions"><button id="capture" class="primary" disabled>Ambil foto <kbd>S</kbd></button><button id="cancel-session" hidden>Batalkan sesi</button><button id="stop-camera" disabled>Matikan kamera</button></div>
+    <section id="saved-section" class="saved-section" aria-labelledby="saved-heading" hidden><div class="saved-heading"><h2 id="saved-heading">Foto tersimpan di sesi ini</h2><p>Unduh sebelum menutup halaman. Print membuka pilihan printer Anda.</p></div><div id="saved-photos" class="saved-photos"></div></section>
+    <footer>Foto tidak diunggah. Model MediaPipe dimuat dari situs ini. <a href="privacy.html">Privasi & lisensi</a></footer>
+  </main>
+  <div id="print-area" aria-hidden="true"></div>
+  <script type="module" src="app.js"></script>
+</body></html>

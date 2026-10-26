@@ -6,6 +6,8 @@ tempat tanpa menyentuh berkas lain.
 """
 from __future__ import annotations
 
+from functools import lru_cache
+
 import cv2
 import numpy as np
 
@@ -16,21 +18,29 @@ RADIUS = 16                     # sudut membulat bawaan
 # Semua BGR. Nama menyebut PERAN, bukan rupa, jadi seluruh tampilan bisa diubah
 # dari sini saja.
 
-BG = (250, 250, 251)            # latar halaman, hampir putih
-SURFACE = (247, 248, 250)       # kartu / panel
-SURFACE_HI = (255, 240, 232)    # kartu aktif, semburat aksen
-STROKE = (231, 231, 235)        # garis tepi halus
-SHADOW = (214, 214, 220)        # bayangan lembut kartu
+BG = (243, 246, 245)
+SURFACE = (255, 255, 255)
+SURFACE_HI = (232, 238, 235)
+STROKE = (211, 219, 215)
+SHADOW = (197, 207, 201)
 
-INK = (34, 32, 30)              # teks utama, hampir hitam
-MUTED = (122, 118, 112)         # teks sekunder
-FAINT = (176, 174, 170)         # teks paling redup, garis bantu
+INK = (38, 45, 35)
+MUTED = (91, 105, 95)
+FAINT = (110, 122, 113)
 
-ACCENT = (240, 110, 55)         # biru-indigo (RGB ~ 55 110 240), warna aksi
-ACCENT_SOFT = (250, 226, 210)   # semburat aksen untuk isian
-GOOD = (94, 179, 60)            # hijau
-WARN = (30, 130, 230)           # oranye
-DANGER = (60, 60, 226)          # merah
+ACCENT = (79, 105, 24)
+ACCENT_SOFT = (216, 237, 226)
+GOOD = (67, 105, 25)
+ON_GOOD = (255, 255, 255)
+WARN = (20, 94, 153)
+DANGER = (61, 57, 177)
+ON_DANGER = (255, 255, 255)
+NAV = (39, 43, 31)
+NAV_HOVER = (55, 65, 48)
+NAV_TEXT = (239, 246, 241)
+NAV_MUTED = (176, 192, 181)
+MINT = (185, 230, 161)
+STAGE = (31, 34, 26)
 
 PANEL = SURFACE                 # nama lama, masih dipakai beberapa modul
 
@@ -74,14 +84,15 @@ def text_size(message: str, scale: float = 0.5, thickness: int = 1,
 
 def text_center(frame: np.ndarray, message: str, center: tuple[int, int],
                 scale: float = 0.5, color: tuple[int, int, int] = INK,
-                thickness: int = 1, font: int = FONT) -> None:
+                thickness: int = 1, font: int = FONT, shadow: bool = True) -> None:
     w, h = text_size(message, scale, thickness, font)
     text(frame, message, (int(center[0] - w / 2), int(center[1] + h / 2)),
-         scale, color, thickness, font)
+         scale, color, thickness, font, shadow=shadow)
 
 
 # ---------- bentuk ----------
 
+@lru_cache(maxsize=128)
 def _rounded_mask(w: int, h: int, radius: int) -> np.ndarray:
     radius = max(0, min(int(radius), min(w, h) // 2))
     mask = np.zeros((h, w), dtype=np.uint8)
@@ -94,6 +105,15 @@ def _rounded_mask(w: int, h: int, radius: int) -> np.ndarray:
                    (radius, h - radius), (w - radius, h - radius)):
         cv2.circle(mask, (cx, cy), radius, 255, -1, cv2.LINE_AA)
     return mask
+
+
+def fit_text(message: str, width: int, scale: float = 0.5, thickness: int = 1) -> str:
+    message = ascii_only(message)
+    if text_size(message, scale, thickness)[0] <= width:
+        return message
+    while message and text_size(message + "...", scale, thickness)[0] > width:
+        message = message[:-1]
+    return message + "..." if message else ""
 
 
 def rounded_rect(frame: np.ndarray, x: int, y: int, w: int, h: int,

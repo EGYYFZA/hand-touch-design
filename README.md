@@ -4,6 +4,28 @@ Kanvas interaktif yang dikendalikan gerakan tangan lewat kamera laptop.
 Semua pemrosesan berjalan lokal di CPU; hasil gambar disimpan ke folder
 `captures/` di komputer sendiri.
 
+## Versi browser, Print, dan Vercel
+
+Versi desktop Python dan versi browser tersedia di repository ini. Untuk web:
+
+```text
+npm ci --ignore-scripts
+npm run dev
+```
+
+Buka http://127.0.0.1:4173 lalu aktifkan kamera. Browser menyediakan empat mode,
+foto tunggal/strip, tombol **Unduh PNG**, dan **Print** pada setiap foto tersimpan.
+Foto web tersimpan dalam sesi tab; unduh sebelum menutup halaman. Di PowerShell,
+gunakan `npm.cmd` jika `npm.ps1` diblokir.
+
+Untuk Vercel, gunakan **Framework: Other**, **Root Directory: root repository**,
+**Build: npm run build**, **Output: dist**. Konfigurasi sudah tersedia di
+`vercel.json`. Panduan, privasi, rollback, dan catatan riwayat Git ada di
+[docs/deploy-vercel.md](docs/deploy-vercel.md).
+
+Kode proyek berlisensi MIT; model dan library pihak ketiga memiliki lisensi
+terpisah. Lihat [THIRD_PARTY.md](THIRD_PARTY.md) dan [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Menjalankan
 
 > **Wajib Python 3.9 – 3.12.** MediaPipe belum punya wheel untuk 3.13/3.14.
@@ -79,10 +101,23 @@ setiap pasangan dan setiap rotasi.
 
 ## Tampilan
 
-Tata letaknya seperti aplikasi web berukuran 1024 px berlatar putih: rel menu di
-kiri, kartu kamera di tengah dengan header (nama mode, efek aktif, FPS) dan
-petunjuk di kaki. Jendela muncul apa adanya (1:1), jadi klik mouse tepat pada
-tombol.
+Workspace studio berukuran awal 1120 x 704: navigasi gelap di kiri, kamera di
+tengah, lalu petunjuk dan tombol tindakan di bawahnya. Jendela bisa diubah
+ukurannya; tata letak mengikuti area tampilan mulai 960 x 640. Rasio gambar
+kamera dipertahankan. Ukuran yang lebih kecil ditampilkan dengan skala OpenCV.
+
+`Tab` memindahkan fokus dan `Enter` memilih tombol. Tombol tindakan mengikuti
+mode aktif dan bisa diklik. Untuk mengurangi gerakan antarmuka, ubah
+`ui.reduced_motion` menjadi `true` di `config/settings.yaml`.
+
+Jika kamera terputus, frame lama tidak dipakai untuk mengambil foto. Sesi
+Photobooth dijeda dan tombol **Coba kamera lagi** muncul (`C`). Periksa koneksi,
+izin kamera Windows, dan aplikasi lain yang sedang menggunakan kamera.
+
+Jika foto gagal disimpan, hasil tetap tersedia di memori meskipun berpindah
+mode. Pilih **Coba simpan** (`S`) atau **Buang foto** (`R`). `Q`/`Esc` meminta
+Anda menyelesaikan foto yang belum tersimpan sebelum keluar. Menutup paksa
+proses atau jendela tetap menghapus foto yang hanya tersimpan di memori.
 
 ## Memilih menu dengan tangan
 
@@ -142,9 +177,9 @@ pojok. Setiap meme punya pemicu tetap:
 | **clingy** | **Satu jari didekatkan ke mulut** + senyum |
 | **shock** | **Dua tangan di depan dada** + wajah kaget (mulut menganga, mata lebar) |
 
-Panel kecil di kiri-bawah kamera menampilkan ekspresi yang sedang terbaca
-(senyum, mulut, lidah, mata) — berguna untuk melihat mengapa sebuah meme muncul
-atau tidak. Tekan `M` untuk menyembunyikannya, `+`/`-` mengubah ukuran meme.
+Tekan `M` untuk menampilkan panel ekspresi di kiri-bawah kamera
+(senyum, mulut, lidah, mata), berguna untuk melihat mengapa sebuah meme muncul
+atau tidak. Panel ini tersembunyi secara bawaan. `+`/`-` mengubah ukuran meme.
 
 Wajah dikenali lewat MediaPipe Face Landmarker. Senyum, rahang, dan mata diambil
 dari *blendshape*; lidah dari **warna mulut** (MediaPipe tidak punya blendshape
@@ -241,6 +276,26 @@ lalu sebut namanya di `config/gestures.yaml`. Pipeline tidak perlu disentuh.
   tangan kanan lalu landmark melompat.
 - Nama aset yang berasal dari config disaring supaya tidak bisa keluar dari
   folder `assets/`.
+## Pemeriksaan lokal
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+.\.venv\Scripts\python.exe tools\preview_ui.py
+```
+
+Tes tidak membuka kamera. Pratinjau menggunakan frame sintetis dan ditulis ke
+`docs/ui-preview/`. Kontrak desain dan batas pemeriksaan ada di
+[`docs/ui-contract.md`](docs/ui-contract.md).
+
+Di desktop, setelah foto tersimpan, tombol **Print foto** muncul dan `P` membuka
+pratinjau cetak pada browser bawaan. Pilih printer dan kertas pada dialog cetak.
+Pratinjau `.print.html` disimpan di samping PNG dalam folder captures dan tetap
+lokal. Tombol Print tidak bergantung pada kamera yang masih aktif.
+
+Untuk tes web: `npm test`, `npm run build`, dan `npm run test:e2e` setelah
+`npx --no-install playwright install chromium`. GitHub Actions menjalankan tes
+desktop dan browser di setiap push/pull request.
+
 ## Privacy and security
 
 Camera captures and virtual environments stay local and are ignored by Git. Use only trusted model files. See [SECURITY.md](SECURITY.md).

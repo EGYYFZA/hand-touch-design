@@ -1,5 +1,10 @@
 # Folder aset
 
+Versi open source menyertakan empat stiker yang digambar oleh kode di
+`storage/assets.py`; PNG tambahan tidak diperlukan. Gambar kustom dibaca jika
+tersedia secara lokal. Folder PNG meme/photobooth diabaikan oleh Git agar foto
+pribadi dan aset yang izinnya belum jelas tidak ikut dipublikasikan.
+
 Taruh gambar Anda di sini. Format yang dibaca: `.png`, `.webp`, `.jpg`, `.jpeg`
 — dicoba sesuai urutan itu. **Pakai PNG dengan latar transparan** kalau ingin
 gambarnya menempel rapi di atas tangan; JPG akan muncul sebagai kotak penuh.

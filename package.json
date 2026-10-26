@@ -1,0 +1,17 @@
+{
+  "name": "gesturecanvas",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local camera studio for desktop and browser",
+  "license": "MIT",
+  "engines": {"node": ">=22"},
+  "scripts": {
+    "build": "node tools/build-web.mjs",
+    "dev": "npm run build && node tools/serve-web.mjs",
+    "test": "node --test tests/web/*.test.mjs",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {"@mediapipe/tasks-vision": "0.10.35"},
+  "devDependencies": {"@playwright/test": "1.64.1"}
+}

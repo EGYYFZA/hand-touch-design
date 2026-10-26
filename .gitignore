@@ -17,3 +17,9 @@ Thumbs.db
 
 # Camera captures stay on the local machine
 /captures/
+/dist/
+/test-results/
+/playwright-report/
+/.local-assets/
+/assets/memes/*.png
+/assets/photobooth/*.png

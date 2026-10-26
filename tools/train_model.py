@@ -8,6 +8,7 @@ memakainya saat dijalankan berikutnya.
 from __future__ import annotations
 
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -52,10 +53,12 @@ def main() -> int:
         print("Butuh minimal dua label berbeda untuk melatih.")
         return 1
 
-    # stratify hanya mungkin kalau setiap label punya minimal 2 sampel
-    stratify = y if counts.min() >= 2 else None
+    test_count = math.ceil(len(y) * 0.2)
+    if counts.min() < 2 or min(test_count, len(y) - test_count) < len(labels):
+        print("Data belum cukup untuk membagi semua label. Tambah sampel tiap label (disarankan minimal 30).")
+        return 1
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=stratify
+        X, y, test_size=0.2, random_state=42, stratify=y
     )
 
     model = RandomForestClassifier(
