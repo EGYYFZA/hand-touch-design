@@ -1,8 +1,10 @@
-import { cp, mkdir, copyFile, readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { cp, mkdir, copyFile, readFile, rm } from 'node:fs/promises';
+import { resolve, relative } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 const output = resolve(root, 'dist');
+if (relative(root, output) !== 'dist') throw new Error('Build output must be the workspace dist directory');
+await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await cp(resolve(root, 'web'), output, { recursive: true });
 await mkdir(resolve(output, 'vendor/wasm'), { recursive: true });

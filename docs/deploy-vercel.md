@@ -25,8 +25,8 @@ If the model cannot load, camera capture and manual mode buttons remain usable.
 
 ## Import from GitHub
 
-1. Review and merge the feature pull request into main, or select the feature
-   branch as your Vercel project's production branch before deploying it.
+1. Select the tested main branch, or review and merge any subsequent feature
+   pull request before deploying it. Configure main as the production branch.
 2. In your Vercel account choose Add New → Project and import
    https://github.com/EGYYFZA/hand-touch-design.
 3. Root Directory: repository root. Framework Preset: Other. No environment
@@ -69,7 +69,7 @@ camera PNGs under captures/, and former meme PNGs had no provenance record. The
 current tree excludes those files, but old commits remain accessible. Review
 that history before advertising a public release. Removing it would rewrite
 public Git history and invalidate existing clones/forks; it is not done by this
-feature branch. A GitHub source archive of the new commit contains the cleaned
+release. A GitHub source archive of the new commit contains the cleaned
 current tree, not the old history.
 
 References:
