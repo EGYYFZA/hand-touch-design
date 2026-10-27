@@ -15,6 +15,7 @@ main{height:100dvh;width:100%;padding:0}
 .menu-screen>p{font-size:13px;color:var(--muted);margin-bottom:24px}
 #booth-tools .note{border:0;padding:0;margin:0}.meme-guide>div:last-child,.gesture-list>div:last-child{border-bottom:0}
 .feedback:empty{display:none}body[data-phase=setup] #mode-nav{visibility:hidden}body:not([data-phase=studio]) .tool-panel,body[data-phase=setup] #gallery-toggle:disabled,#stop-camera:disabled{display:none}
+body:has(#empty-state:not([hidden])) .tool-panel,body:has(#empty-state:not([hidden])) #toggle-tools{display:none}
 body:not([data-phase=setup]) #manual-access{display:none}.actions .text-button{margin:0;padding:8px 12px}
 @media(max-width:1100px){.badge{font-size:0;margin-right:4px}.badge:before{height:7px;width:7px}nav .mode{padding:10px 12px}.topbar{gap:10px}}
 @media(max-width:760px){
@@ -30,7 +31,8 @@ body:not([data-phase=setup]) #manual-access{display:none}.actions .text-button{m
  .shape-tools button,.tool-row button,#undo-paint{font-size:11px}.gesture-list dt span{font-size:12px}.gesture-list dd{font-size:11px}
  #color-picker{right:0;top:0;width:228px;padding:16px}#color-field{height:155px}
  .bottom-bar{bottom:12px;left:12px;right:12px}.actions button{font-size:11px;padding:9px 12px}.actions kbd{display:none}
- .stage-status{bottom:84px;left:16px;font-size:10px}.feedback{bottom:150px;font-size:11px;max-width:calc(100vw - 32px)}
+ .stage-status{bottom:84px;left:16px;font-size:10px;max-width:calc(100vw - 268px)}.feedback{bottom:150px;font-size:11px;max-width:calc(100vw - 32px)}
+ body[data-phase=studio]:has(#empty-state[hidden]) .feedback{top:140px;bottom:auto;left:16px;transform:none;max-width:calc(100vw - 268px);text-align:left}
  .countdown{font-size:130px}.shot-feedback{top:140px;font-size:11px}
  .saved-section{padding:16px;gap:10px!important}.saved-heading h2{font-size:20px}.photo-actions{gap:6px}.photo-actions button,.photo-actions a{font-size:11px;padding:9px 10px}.gallery-note{font-size:10px}
 }
