@@ -11,10 +11,63 @@ export function describeHand(points) {
   else if (pinch < 0.32) pose = 'pinch';
   else if (extended.filter(Boolean).length >= 4) pose = 'open';
   else if (extended[1] && extended[2] && !extended[3] && !extended[4]) pose = 'peace';
-  else if (extended[0] && extended[1] && !extended[2] && !extended[4]) pose = points[8].y < points[5].y ? 'l_up' : 'l_down';
+  else if (extended[0] && extended[1] && !extended[2] && !extended[3] && !extended[4]) pose = points[8].y < points[5].y ? 'l_up' : 'l_down';
   else if (extended[1] && extended.filter(Boolean).length === 1) pose = 'point';
   return { points, pose, palm, pinch, gap: distance(points[8], points[12]) / palm,
     paint: { x: (points[4].x + points[8].x) / 2, y: (points[4].y + points[8].y) / 2 } };
+}
+
+// A held target fires once; moving away or losing tracking rearms it.
+export class DwellSelector {
+  target = null; since = 0; fired = false; progress = 0; lastAt = 0;
+  update(target, now, duration = 800) {
+    if (now - this.lastAt > 300 || target !== this.target) {
+      this.target = target; this.since = now; this.fired = false;
+    }
+    this.lastAt = now;
+    this.progress = target ? clamp((now - this.since) / duration, 0, 1) : 0;
+    if (target && !this.fired && this.progress === 1) { this.fired = true; return target; }
+    return null;
+  }
+}
+
+export function screenPoint(point, width, height) {
+  return { x: clamp((point.x - 0.12) / 0.76, 0, 1) * (width - 1),
+    y: clamp((point.y - 0.1) / 0.7, 0, 1) * (height - 1) };
+}
+
+export function shapeBounds(hands) {
+  if (hands.length !== 2 || !hands.every(hand => hand.pose === 'pinch' && hand.pinch < 0.45)) return null;
+  const [a, b] = hands.map(hand => hand.paint);
+  return { x: clamp(Math.min(a.x, b.x), 0, 1), y: clamp(Math.min(a.y, b.y), 0, 1),
+    w: clamp(Math.abs(a.x - b.x), 0, 1), h: clamp(Math.abs(a.y - b.y), 0, 1) };
+}
+
+export function hsvToHex(hue, saturation, value) {
+  const channel = n => {
+    const k = (n + hue / 60) % 6;
+    return Math.round(255 * value * (1 - saturation * Math.max(0, Math.min(k, 4 - k, 1)))).toString(16).padStart(2, '0');
+  };
+  return `#${channel(5)}${channel(3)}${channel(1)}`;
+}
+
+export function expressionScores(hands, face, shapes, tongue = 0) {
+  if (!face) return {};
+  const smile = Math.max(shapes.mouthSmileLeft || 0, shapes.mouthSmileRight || 0);
+  const mouth = { x: (face[13].x + face[14].x) / 2, y: (face[13].y + face[14].y) / 2 };
+  const width = Math.max(distance(face[234], face[454]), 0.01);
+  const fingerAtMouth = hands.some(hand => hand.pose === 'point' && distance(hand.points[8], mouth) < width * 0.24);
+  const idea = hands.some(hand => hand.pose === 'point' && hand.points[8].y < hand.points[5].y - hand.palm * 0.3 && distance(hand.points[8], mouth) > width * 0.4);
+  // shortcut: chest is estimated below the face; use a pose model for full-body matching.
+  const chestHands = hands.filter(hand => {
+    const palm = hand.points[9];
+    return Math.abs(palm.x - mouth.x) < width * 1.15 && palm.y > face[152].y && palm.y < face[152].y + width * 1.8;
+  });
+  const clasped = chestHands.length === 2 && distance(chestHands[0].points[9], chestHands[1].points[9]) < width;
+  const surprised = Math.min((shapes.jawOpen || 0) * 1.5,
+    Math.max(shapes.eyeWideLeft || 0, shapes.eyeWideRight || 0, shapes.browInnerUp || 0) * 1.7);
+  return { clingy: fingerAtMouth ? smile : 0, idea: idea && !fingerAtMouth ? smile : 0,
+    shock: clasped ? surprised : 0, tongue: smile >= 0.3 ? tongue : 0 };
 }
 
 export function automaticEffect(hands) {

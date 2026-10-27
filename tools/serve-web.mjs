@@ -6,7 +6,7 @@ const root = resolve(import.meta.dirname, '../dist');
 const config = JSON.parse(await readFile(resolve(import.meta.dirname, '../vercel.json'), 'utf8'));
 const securityHeaders = Object.fromEntries(config.headers[0].headers.map(({ key, value }) => [key, value]));
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript',
-  '.css': 'text/css', '.wasm': 'application/wasm', '.task': 'application/octet-stream', '.svg': 'image/svg+xml' };
+  '.css': 'text/css', '.wasm': 'application/wasm', '.task': 'application/octet-stream', '.svg': 'image/svg+xml', '.webp': 'image/webp' };
 createServer(async (request, response) => {
   try {
     const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);

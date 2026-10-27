@@ -18,3 +18,6 @@ requirements.txt
 docs_preview.png
 test-results
 playwright-report
+
+.local-assets
+.ecc
