@@ -1,0 +1,113 @@
+export const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+export const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+export function describeHand(points) {
+  const palm = Math.max(distance(points[0], points[9]), 0.001);
+  const extended = [distance(points[4], points[17]) > distance(points[3], points[17]),
+    ...[[8, 6], [12, 10], [16, 14], [20, 18]].map(([tip, joint]) => distance(points[tip], points[0]) > distance(points[joint], points[0]))];
+  const pinch = distance(points[4], points[8]) / palm;
+  let pose = 'none';
+  if (!extended.some(Boolean)) pose = 'fist';
+  else if (pinch < 0.32) pose = 'pinch';
+  else if (extended.filter(Boolean).length >= 4) pose = 'open';
+  else if (extended[1] && extended[2] && !extended[3] && !extended[4]) pose = 'peace';
+  else if (extended[0] && extended[1] && !extended[2] && !extended[3] && !extended[4]) pose = points[8].y < points[5].y ? 'l_up' : 'l_down';
+  else if (extended[1] && extended.filter(Boolean).length === 1) pose = 'point';
+  return { points, pose, palm, pinch, gap: distance(points[8], points[12]) / palm,
+    paint: { x: (points[4].x + points[8].x) / 2, y: (points[4].y + points[8].y) / 2 } };
+}
+
+// A held target fires once; moving away or losing tracking rearms it.
+export class DwellSelector {
+  target = null; since = 0; fired = false; progress = 0; lastAt = 0;
+  update(target, now, duration = 800) {
+    if (now - this.lastAt > 300 || target !== this.target) {
+      this.target = target; this.since = now; this.fired = false;
+    }
+    this.lastAt = now;
+    this.progress = target ? clamp((now - this.since) / duration, 0, 1) : 0;
+    if (target && !this.fired && this.progress === 1) { this.fired = true; return target; }
+    return null;
+  }
+}
+
+export function screenPoint(point, width, height) {
+  return { x: clamp((point.x - 0.12) / 0.76, 0, 1) * (width - 1),
+    y: clamp((point.y - 0.1) / 0.7, 0, 1) * (height - 1) };
+}
+
+export function shapeBounds(hands) {
+  if (hands.length !== 2 || !hands.every(hand => hand.pose === 'pinch' && hand.pinch < 0.45)) return null;
+  const [a, b] = hands.map(hand => hand.paint);
+  return { x: clamp(Math.min(a.x, b.x), 0, 1), y: clamp(Math.min(a.y, b.y), 0, 1),
+    w: clamp(Math.abs(a.x - b.x), 0, 1), h: clamp(Math.abs(a.y - b.y), 0, 1) };
+}
+
+export function hsvToHex(hue, saturation, value) {
+  const channel = n => {
+    const k = (n + hue / 60) % 6;
+    return Math.round(255 * value * (1 - saturation * Math.max(0, Math.min(k, 4 - k, 1)))).toString(16).padStart(2, '0');
+  };
+  return `#${channel(5)}${channel(3)}${channel(1)}`;
+}
+
+export function expressionScores(hands, face, shapes, tongue = 0) {
+  if (!face) return {};
+  const smile = Math.max(shapes.mouthSmileLeft || 0, shapes.mouthSmileRight || 0);
+  const mouth = { x: (face[13].x + face[14].x) / 2, y: (face[13].y + face[14].y) / 2 };
+  const width = Math.max(distance(face[234], face[454]), 0.01);
+  const fingerAtMouth = hands.some(hand => hand.pose === 'point' && distance(hand.points[8], mouth) < width * 0.24);
+  const idea = hands.some(hand => hand.pose === 'point' && hand.points[8].y < hand.points[5].y - hand.palm * 0.3 && distance(hand.points[8], mouth) > width * 0.4);
+  // shortcut: chest is estimated below the face; use a pose model for full-body matching.
+  const chestHands = hands.filter(hand => {
+    const palm = hand.points[9];
+    return Math.abs(palm.x - mouth.x) < width * 1.15 && palm.y > face[152].y && palm.y < face[152].y + width * 1.8;
+  });
+  const clasped = chestHands.length === 2 && distance(chestHands[0].points[9], chestHands[1].points[9]) < width;
+  const surprised = Math.min((shapes.jawOpen || 0) * 1.5,
+    Math.max(shapes.eyeWideLeft || 0, shapes.eyeWideRight || 0, shapes.browInnerUp || 0) * 1.7);
+  return { clingy: fingerAtMouth ? smile : 0, idea: idea && !fingerAtMouth ? smile : 0,
+    shock: clasped ? surprised : 0, tongue: smile >= 0.3 ? tongue : 0 };
+}
+
+export function automaticEffect(hands) {
+  const pair = hands.slice(0, 2);
+  if (pair.length === 2 && pair.every(hand => hand.pose.startsWith('l_'))) {
+    const points = pair.flatMap(hand => [hand.points[4], hand.points[8], hand.points[5]]);
+    const x = clamp(Math.min(...points.map(p => p.x)) - 0.025, 0, 0.999);
+    const y = clamp(Math.min(...points.map(p => p.y)) - 0.025, 0, 0.999);
+    const right = clamp(Math.max(...points.map(p => p.x)) + 0.025, x + 0.001, 1);
+    const bottom = clamp(Math.max(...points.map(p => p.y)) + 0.025, y + 0.001, 1);
+    return { name: pair.every(h => h.pose === 'l_up') ? 'blur' : pair.every(h => h.pose === 'l_down') ? 'flip' : 'mosaic',
+      rect: { x, y, w: right - x, h: bottom - y } };
+  }
+  const peace = hands.find(hand => hand.pose === 'peace');
+  return { name: peace ? 'blur' : 'none', radius: peace ? 4 + clamp(peace.gap, 0, 1.4) * 10 : 0 };
+}
+
+export function canvasPoint(clientX, clientY, rect, width, height, fit = 'contain') {
+  const scale = (fit === 'cover' ? Math.max : Math.min)(rect.width / width, rect.height / height);
+  const x = (clientX - rect.left - (rect.width - width * scale) / 2) / scale;
+  const y = (clientY - rect.top - (rect.height - height * scale) / 2) / scale;
+  return x >= 0 && x <= width && y >= 0 && y <= height ? { x, y } : null;
+}
+
+export function smoothPoint(previous, target, elapsed, response = 60) {
+  if (!previous) return { ...target };
+  const alpha = 1 - Math.exp(-Math.max(0, elapsed) / response);
+  return { x: previous.x + (target.x - previous.x) * alpha, y: previous.y + (target.y - previous.y) * alpha };
+}
+
+export class MemeLatch {
+  candidate = null; since = 0; showing = null;
+  update(scores, now) {
+    const threshold = name => name === 'tongue' ? 0.45 : 0.35;
+    if (this.showing && (scores[this.showing] || 0) < threshold(this.showing) * 0.6) this.showing = null;
+    const best = Object.entries(scores).filter(([name, score]) => score >= threshold(name)).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+    if (best && best !== this.showing) {
+      if (best !== this.candidate) { this.candidate = best; this.since = now; }
+      if (now - this.since >= 180) { this.showing = best; this.candidate = null; }
+    } else this.candidate = null;
+    return this.showing;
+  }
+}

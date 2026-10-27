@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import time
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -31,17 +32,19 @@ class PhotoboothMode(Mode):
 
     def __init__(self, ctx: AppContext) -> None:
         super().__init__(ctx)
-        self.phase = "idle"               # idle | counting | review
+        self.phase = "idle"               # idle | counting | review | error
         self.shots: list[np.ndarray] = []
         self._deadline = 0.0
         self._strip: np.ndarray | None = None
         self._saved: str = ""
 
     def on_enter(self) -> None:
-        self.reset()
+        if self.phase != "error":
+            self.reset()
 
     def on_exit(self) -> None:
-        self.reset()
+        if self.phase != "error":
+            self.reset()
 
     def reset(self) -> None:
         self.phase = "idle"
@@ -78,8 +81,8 @@ class PhotoboothMode(Mode):
             else:
                 self._draw_countdown(frame, remaining)
 
-        elif self.phase == "review":
-            if now >= self._deadline:
+        elif self.phase in ("review", "error"):
+            if self.phase == "review" and now >= self._deadline:
                 self.reset()
             elif self._strip is not None:
                 frame = self._draw_review(frame)
@@ -109,11 +112,19 @@ class PhotoboothMode(Mode):
         self._strip = self._stamp_logo(self._make_strip(self.shots))
         try:
             path = self.ctx.exporter.save(self._strip, {"mode": self.id, "shots": len(self.shots)})
-            self._saved = path.name
+            self.on_saved(path)
         except (OSError, RuntimeError) as exc:
             self._saved = f"gagal simpan: {exc}"
+            self.phase = "error"
+
+    def on_saved(self, path: Path) -> None:
+        self._saved = path.name
         self.phase = "review"
         self._deadline = time.perf_counter() + REVIEW
+
+    def on_camera_wait(self, seconds: float) -> None:
+        if self.phase == "counting":
+            self._deadline += seconds
 
     @staticmethod
     def _make_strip(shots: list[np.ndarray]) -> np.ndarray:
@@ -159,26 +170,35 @@ class PhotoboothMode(Mode):
         out[T.PAD:T.PAD + preview.shape[0], x:x + preview.shape[1]] = preview
         T.rounded_border(out, x - 2, T.PAD - 2, preview.shape[1] + 4,
                          preview.shape[0] + 4, T.ACCENT_SOFT, 2, radius=10)
-        if self._saved:
-            w_, h_ = T.text_size(self._saved, 0.46, 1)
-            T.pill(out, (w - w_ - 40) // 2, h - 46, f"tersimpan: {self._saved}",
-                   0.46, T.INK, T.GOOD, 0.9)
         return out
 
     # ---------- keterangan ----------
 
     def effect_label(self) -> str:
-        return self.phase
+        return {"idle": "Siap", "counting": "Mengambil foto", "review": "Tersimpan", "error": "Belum tersimpan"}[self.phase]
 
     def hint(self) -> str:
         if self.phase == "idle":
             return "kepalkan tangan atau tekan Spasi untuk memulai"
         if self.phase == "counting":
             return f"bersiap... {len(self.shots)}/{SHOTS}"
+        if self.phase == "error":
+            return "Foto tetap disimpan di memori. S: coba simpan lagi. R: buang foto."
         return "hasil disimpan ke captures/"
 
     def status(self) -> str:
+        if self.phase == "error":
+            return self._saved
         return f"{len(self.shots)}/{SHOTS} jepretan"
+
+    def actions(self) -> list[tuple[str, int]]:
+        if self.phase == "error":
+            return [("Coba simpan", ord("s")), ("Buang foto", ord("r"))]
+        if self.phase == "counting":
+            return [("Batalkan sesi", ord("r"))]
+        if self.phase == "review":
+            return [("Simpan salinan", ord("s")), ("Selesai", ord("r"))]
+        return [("Mulai sesi", ord(" "))]
 
     def handle_key(self, key: int) -> None:
         if key == ord(" "):
@@ -186,7 +206,7 @@ class PhotoboothMode(Mode):
         elif key in (ord("r"), ord("R")):
             self.reset()
 
-    def snapshot(self, frame: np.ndarray) -> tuple[np.ndarray, dict]:
+    def snapshot(self, frame: np.ndarray | None) -> tuple[np.ndarray | None, dict]:
         if self._strip is not None:
             return self._strip, {"mode": self.id, "shots": len(self.shots)}
         return frame, {"mode": self.id}

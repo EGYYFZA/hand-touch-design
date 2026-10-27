@@ -1,5 +1,13 @@
 # Folder aset
 
+**Web EGZ:** memakai `web/memes/clingy.webp`, `idea.webp`, `shock.webp`, dan `tongue.webp`. Keempatnya merupakan salinan 640x640 dari gambar monyet di `.local-assets/original-memes/`. Build menyalin hanya versi WebP. Frame Photobooth web digambar di Canvas agar mengikuti ukuran foto. Panduan berikut untuk aset aplikasi **desktop Python**.
+
+
+Versi open source menyertakan empat stiker yang digambar oleh kode di
+`storage/assets.py`; PNG tambahan tidak diperlukan. Gambar kustom dibaca jika
+tersedia secara lokal. Folder PNG meme/photobooth diabaikan oleh Git agar foto
+pribadi dan aset yang izinnya belum jelas tidak ikut dipublikasikan.
+
 Taruh gambar Anda di sini. Format yang dibaca: `.png`, `.webp`, `.jpg`, `.jpeg`
 — dicoba sesuai urutan itu. **Pakai PNG dengan latar transparan** kalau ingin
 gambarnya menempel rapi di atas tangan; JPG akan muncul sebagai kotak penuh.
