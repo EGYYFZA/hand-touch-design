@@ -1,61 +1,55 @@
-# Print and browser release audit
+﻿# EGZ production audit
 
-Production audit: **80/100, launchable with caveats**. The static Vercel build
-and local camera/print flows pass automated checks. Physical devices, a live
-Vercel deployment and historical capture review remain manual release checks.
+Production audit: **80/100, launchable with caveats**. The minimal fullscreen UI and automated camera flows pass; physical-camera acceptance and deployed HTTPS verification remain release checks.
 
-## Blockers for broader public distribution
+Reviewed on **28 October 2026 (Asia/Jakarta)**. Application baseline: `8e40159`, merged in [PR #7](https://github.com/EGYYFZA/hand-touch-design/pull/7). This report supersedes the earlier print-release audit. Scope: browser studio, build/deployment boundaries, and existing desktop CI coverage. No external audit service or remote scanner received repository contents.
 
-- Old public Git commits still contain files under captures/ and the original
-  meme PNGs. Review their content and redistribution rights before advertising
-  the repository as a history-sanitized release. The current tree excludes them;
-  this work does not rewrite public Git history or remove existing forks.
+## Blockers
 
-## High-value follow-up checks
+No reproducible application blocker remains in the tested paths. This verdict covers a controlled rollout, not validated gesture accuracy across real users and devices.
 
-- Test a real camera and physical printer, including paper size and scaling.
-  The app opens a print dialog; it cannot confirm that paper was printed.
-- After importing main into Vercel, check camera permission, model loading,
-  download and Print on the actual HTTPS deployment.
-- Browser automation currently targets Chromium. Test Safari and mobile hardware
-  before promising equivalent gesture support there. Manual controls remain
-  available if model initialization fails.
+Before broader public distribution, resolve the already documented provenance of the supplied monkey images and review historical camera captures. Current static output excludes captures and private originals; old Git commits still contain capture paths. No history rewrite was performed.
+
+## UI and recovery changes verified
+
+- Onboarding and mode selection are centered. Redundant slogans, duplicate instructions, the separate introductory sidebar, and FPS decoration were removed.
+- The camera fills one viewport. Navigation floats above it; contextual tools sit at the right and primary actions are centered below. Tool labels, gaps, and button sizes remain consistent.
+- Painting retains the hue and saturation/brightness picker, gesture selection, shapes, undo, and keyboard alternatives. Fewer words do not remove calibration or error recovery.
+- On a phone, stopping the camera hides the tool panel so it cannot cover the restart button. Resuming a paused photobooth session still produces one three-photo strip.
+- The gallery shows one photo at a time without page scrolling. Download, printing, deletion confirmation, and focus restoration remain available.
 
 ## Evidence checked
 
-- 25 Python regression tests pass, including preserved Photobooth captures,
-  original generated stickers, saved-image printing and camera recovery.
-- 6 Node tests pass, including a rebuild containing a deliberately stale
-  synthetic capture fixture; the rebuild removes the fixture and excludes
-  private workspace paths from the output.
-- 6 Chromium browser tests pass: camera capture, selected-photo download/Print,
-  same-origin hand/face model execution, denied permission recovery, three-shot
-  strips, mobile layout/keyboard/reduced motion, and security headers.
-- Print tests intercept the browser print call and inspect print-only CSS.
-  They do not send jobs to a physical printer.
-- Production npm dependency audit reported zero advisories in this work session.
-- MIT code license, Apache license copy, third-party notices, contribution guide,
-  Vercel configuration, deployment instructions and rollback instructions exist.
-- GitHub Actions repeats desktop and browser checks on push/pull request.
-  Check the release commit's Actions run for the remote Linux result.
+[GitHub Actions Checks on the merged application commit](https://github.com/EGYYFZA/hand-touch-design/actions/runs/40545381137) completed successfully:
 
-## Data and deployment boundaries
+| Check | Result |
+| --- | --- |
+| Python regression suite | 25 passed |
+| Node gesture/build tests | 13 passed |
+| Chromium browser tests | 16 passed |
+| Clean dependency install and static build | Passed |
 
-The browser has no upload API, payment flow, authentication service or database.
-Camera frames and captured photo blobs stay in the tab. The gallery is limited
-to 12 entries and warns before closing; download PNG to keep photos permanently.
-Production CSP permits same-origin application connections only. Vercel host
-access logs and third-party model licenses are separate concerns, documented
-in the privacy page and THIRD_PARTY.md.
+Local checks also passed: `npm.cmd test`, `npm.cmd run build`, responsive/keyboard checks, and mobile camera interruption/recovery. The first local full browser run had one 15-second photobooth timeout; that test passed when rerun in isolation without relaxing its timeout or changing capture logic. The subsequent complete GitHub CI suite passed. Real-device latency is still unmeasured.
 
-The build cleans only the verified repository dist directory before copying
-the web allowlist. Desktop virtual environments, captures and local original
-asset backups remain excluded. The old meme files were backed up locally in
-.local-assets/original-memes and replaced with stickers drawn by project code.
+Seven viewport sizes were checked: 375x667, 390x844, 768x900, 1024x768, 1366x768, 1440x900, and 844x390. Assertions cover camera bounds, absence of document overflow, controls within the viewport, and tool-panel separation from header/actions. Setup/menu centering is asserted at the default desktop viewport. Screenshots of setup, menu, painting/picker and mobile controls were inspected under `docs/ui-preview/egz-minimal-*.png`.
 
-## Next action
+Gesture tests use deterministic landmark fixtures. Separate tests run the actual same-origin MediaPipe hand and face workers on synthetic camera frames. Other checks cover permission denial, stale results, three shot notifications, PNG export retry with exact retained pixels, gallery selection/download/print, and reduced motion. These are not measurements of human recognition accuracy or a complete accessibility certification.
 
-Import the tested main branch into Vercel using the repository root, Framework
-Preset **Other**, Build Command **npm run build**, Output Directory **dist**.
-No environment variables are needed. Follow deploy-vercel.md for verification
-and rollback. No Vercel deployment is claimed by this audit.
+Reviewed files: `web/index.html`, `web/styles.css`, `web/app.js`, `web/gestures.js`, `web/vision-worker.js`, browser/build tests, `package.json`, `tools/build-web.mjs`, `tools/serve-web.mjs`, `vercel.json`, `.github/workflows/checks.yml`, `.gitignore`, `.vercelignore`, `THIRD_PARTY.md`, and `docs/deploy-vercel.md`.
+
+## Runtime and release boundaries
+
+- No authentication service, payment flow, database, upload API, or LLM agent exists in this web release; corresponding risk lenses are not applicable.
+- Camera frames and saved blobs stay in tab memory. Gallery capacity is 12 entries; closing/reloading loses undownloaded work. Export failures retain the image for retry. Camera tracks stop when the tab becomes inactive.
+- Models and WASM are served from the same origin. CSP restricts application connections; permissions disable microphone and geolocation. Private workspace paths return 404 in browser tests.
+- The build cleans only the verified `dist` directory. It publishes the web assets, runtime, models, and licenses. The four monkey WebP derivatives are intentionally public; their original source/license remains unrecorded in `THIRD_PARTY.md`.
+- Dependencies are pinned in the lockfile. This UI refinement adds none. No fresh registry advisory scan was run, so this report makes no current zero-vulnerability claim.
+- Vercel configuration and rollback to a previous deployment are documented. No migration or production secret is required. This audit did not deploy the website.
+
+## High-value fixes and missing evidence
+
+1. Run the four modes with real hands/faces on the intended laptop and phone, including dim lighting, dropped tracking, and sustained use. Tongue color and chest-region heuristics can miss or falsely match poses.
+2. Verify camera permission, model loading, capture, download, and recovery on the actual HTTPS deployment; check a physical printer separately.
+3. Test Safari/Firefox and slow devices before promising equivalent support. The browser suite currently targets Chromium.
+
+Next action: perform a real-camera acceptance session on the intended device, then repeat capture/download on the deployed HTTPS URL. See [deployment and rollback instructions](deploy-vercel.md). Earlier benchmark numbers in `egz-audit.md` describe the prior fullscreen revision; they were not remeasured for this styling-only refinement.

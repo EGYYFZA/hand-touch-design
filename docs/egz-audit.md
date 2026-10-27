@@ -4,6 +4,8 @@ What this repo does: EGZ is a local camera studio with hand effects, painting, a
 
 Date: 27 October 2026. This audit includes the requested revision to a full-viewport camera with floating controls and no studio-page scrolling.
 
+For the subsequent minimal UI refinement and verified merged-commit CI, see the [28 October production audit](release-audit.md). Performance numbers below describe the earlier fullscreen revision.
+
 ## Verdict
 
 No reproducible unresolved blocker was found in the checked paths. The tested browser flows pass. This is not a claim of recognition accuracy on a physical camera, a full WCAG certification, or a production deployment result.
