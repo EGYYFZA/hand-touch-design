@@ -36,7 +36,7 @@ Aset web ada di `web/memes/*.webp`, turunan 640x640 dari `.local-assets/original
 
 Benchmark dapat diulang dengan `node tools/benchmark-web.mjs` saat server lokal aktif.
 
-Lihat [audit produksi terbaru](docs/release-audit.md) untuk revisi UI minimalis, [riset dan keputusan desain](docs/egz-research.md), [audit fitur](docs/egz-audit.md), serta [benchmark revisi fullscreen](.ecc/benchmarks/egz-2026-10-27.json). Bagian setelah panduan Vercel di bawah menjelaskan **aplikasi desktop Python**, yang mempunyai UI dan pemetaan navigasi tersendiri.
+Lihat [audit produksi terbaru](docs/release-audit.md), [keputusan desain](docs/egz-research.md), dan [aturan privasi repository](SECURITY.md). Screenshot, dataset, dan laporan benchmark adalah keluaran lokal yang tidak diunggah ke GitHub. Bagian setelah panduan Vercel di bawah menjelaskan **aplikasi desktop Python**, yang mempunyai UI dan pemetaan navigasi tersendiri.
 
 Untuk Vercel, gunakan **Framework: Other**, **Root Directory: root repository**,
 **Build: npm run build**, **Output: dist**. Konfigurasi sudah tersedia di
@@ -304,7 +304,8 @@ lalu sebut namanya di `config/gestures.yaml`. Pipeline tidak perlu disentuh.
 ```
 
 Tes tidak membuka kamera. Pratinjau menggunakan frame sintetis dan ditulis ke
-`docs/ui-preview/`. Kontrak desain dan batas pemeriksaan ada di
+`docs/ui-preview/` yang diabaikan Git. Hasil benchmark di `.ecc/benchmarks/`,
+dataset di `data/`, dan model latihan lokal juga tidak diunggah. Kontrak desain dan batas pemeriksaan ada di
 [`docs/ui-contract.md`](docs/ui-contract.md).
 
 Di desktop, setelah foto tersimpan, tombol **Print foto** muncul dan `P` membuka

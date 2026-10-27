@@ -23,3 +23,43 @@ Thumbs.db
 /.local-assets/
 /assets/memes/*.png
 /assets/photobooth/*.png
+
+# Personal gesture datasets and locally trained models
+/data/
+/models/*
+!/models/hand_landmarker.task
+!/models/face_landmarker.task
+
+# Reproducible local evidence, screenshots and session reports
+/docs/ui-preview/
+/docs_preview.png
+/.ecc/
+/docs/egz-audit.md
+/docs/egz-agent-architecture-audit.json
+/coverage/
+.coverage
+.pytest_cache/
+.ruff_cache/
+*.har
+*.print.html
+
+# Machine-local agent, IDE and cloud configuration
+.codex/
+.agents/
+.aws/
+.ssh/
+.vscode/
+.idea/
+.cache/
+.npmrc
+.pypirc
+.netrc
+/secrets/
+credentials*.json
+service-account*.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.kdbx
