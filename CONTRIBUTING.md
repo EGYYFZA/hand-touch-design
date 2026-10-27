@@ -34,4 +34,6 @@ without a separate privacy/security review. Preserve the same-origin model
 delivery and CSP. Keep button/keyboard alternatives to gesture controls.
 
 Commit messages use feat:, fix:, test:, docs:, ci:, or chore:. Include test
-results and screenshots for UI changes, and disclose hardware checks not run.
+results for UI changes and disclose hardware checks not run. Generate screenshots
+locally; do not commit them or attach camera images, traces, or personal data to
+public PRs. See SECURITY.md for the repository file policy.

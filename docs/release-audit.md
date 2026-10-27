@@ -52,4 +52,29 @@ Reviewed files: `web/index.html`, `web/styles.css`, `web/app.js`, `web/gestures.
 2. Verify camera permission, model loading, capture, download, and recovery on the actual HTTPS deployment; check a physical printer separately.
 3. Test Safari/Firefox and slow devices before promising equivalent support. The browser suite currently targets Chromium.
 
-Next action: perform a real-camera acceptance session on the intended device, then repeat capture/download on the deployed HTTPS URL. See [deployment and rollback instructions](deploy-vercel.md). Earlier benchmark numbers in `egz-audit.md` describe the prior fullscreen revision; they were not remeasured for this styling-only refinement.
+Next action: perform a real-camera acceptance session on the intended device, then repeat capture/download on the deployed HTTPS URL. See [deployment and rollback instructions](deploy-vercel.md). Benchmarks and screenshots can be generated locally and are excluded from Git; earlier measurements were not rerun for the styling-only refinement.
+
+## Repository privacy review, 28 October 2026
+
+Generated screenshots, benchmark output, and superseded session audit reports
+were removed from tracking while preserving local copies. Runtime models,
+feature assets, source, tests, lockfiles, licenses and maintained documentation
+remain. Dataset and locally trained model outputs are now ignored. Repository
+tests reject ignored files if they are forced into the index.
+
+GitHub reported zero secret-scanning alerts and zero Dependabot alerts; secret
+scanning and secret push protection were enabled. A local signature scan of
+4,733 historical text blobs below 2 MB found no supported provider-token or
+private-key signature. The only credential-URL match was placeholder example
+credentials in vendored library text;
+this limited scan is not proof that all historical content is safe. Binary
+content, unknown secret formats and large text blobs were not classified.
+
+Historical paths include three camera PNGs, four capture metadata files, and
+a checked-in virtual environment with local-machine paths. Latest-tree cleanup
+does not erase that history. See [SECURITY.md](../SECURITY.md) for the remaining
+history-removal boundary and the file publication policy.
+
+Cleanup validation: 15 Node tests (including two repository-privacy checks) and
+the static build passed locally. The 54-test application baseline above remains
+identified by its original commit and CI run.

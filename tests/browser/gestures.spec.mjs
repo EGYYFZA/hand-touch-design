@@ -96,7 +96,8 @@ test('fist starts exactly three flashed shots and exports a neon frame, without 
     return {w:c.width,h:c.height,corner:[...ctx.getImageData(0,0,1,1).data],data:c.toDataURL()};
   });
   expect(result.h).toBeGreaterThan(result.w*1.5); expect(result.corner).toEqual([7,16,32,255]);
-  const { writeFile } = await import('node:fs/promises');
+  const { mkdir, writeFile } = await import('node:fs/promises');
+  await mkdir('docs/ui-preview', { recursive: true });
   await writeFile('docs/ui-preview/egz-photostrip.png',Buffer.from(result.data.split(',')[1],'base64'));
   await page.waitForTimeout(1000); await expect(page.locator('#countdown')).toBeHidden();
   await pose(page,[]); await page.waitForTimeout(400); await pose(page,[hand('fist')]);
