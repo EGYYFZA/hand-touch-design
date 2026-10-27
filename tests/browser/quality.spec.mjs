@@ -6,7 +6,14 @@ async function manual(page) {
 }
 
 test('responsive layouts, readable contrast, labels, keyboard color and shape controls', async ({ page }) => {
+  await page.goto('/');
+  const opening = await page.locator('#empty-state').boundingBox();
+  expect(Math.abs(opening.x + opening.width / 2 - 720)).toBeLessThan(1);
+  expect(Math.abs(opening.y + opening.height / 2 - 500)).toBeLessThan(1);
   await manual(page);
+  const menu = await page.locator('#menu-screen').boundingBox();
+  expect(Math.abs(menu.x + menu.width / 2 - 720)).toBeLessThan(1);
+  expect(Math.abs(menu.y + menu.height / 2 - 500)).toBeLessThan(1);
   for (const [width,height] of [[375,667],[390,844],[768,900],[1024,768],[1366,768],[1440,900],[844,390]]) {
     await page.setViewportSize({width,height});
     for (const mode of ['free','painting','photobooth','meme']) {
@@ -17,6 +24,11 @@ test('responsive layouts, readable contrast, labels, keyboard color and shape co
         const r=e.getBoundingClientRect(); return r.left < -1 || r.top < -1 || r.right>innerWidth+1 || r.bottom>innerHeight+1;
       }).map(e=>e.id || e.textContent));
       expect(outside,`${width}x${height}/${mode}`).toEqual([]);
+      const tools = await page.locator('#tool-panel').boundingBox();
+      const header = await page.locator('.topbar').boundingBox();
+      const actions = await page.locator('.actions').boundingBox();
+      expect(tools.y,`${width}x${height}/${mode}: header overlap`).toBeGreaterThanOrEqual(header.y + header.height);
+      expect(tools.y + tools.height,`${width}x${height}/${mode}: action overlap`).toBeLessThanOrEqual(actions.y);
       const camera=await page.locator('#preview').boundingBox(); expect(camera.width).toBe(width);expect(camera.height).toBe(height);
     }
   }
@@ -64,8 +76,10 @@ test('real face model loads only on entering Meme and worker produces a result',
 });
 
 test('camera interruption pauses a session; resuming produces one strip without mode changes', async ({ page }) => {
+  await page.setViewportSize({width:375,height:667});
   await manual(page); await page.locator('#mode-nav [data-mode=photobooth]').click(); await page.locator('#capture').click();
   await page.locator('#stop-camera').click(); await expect(page.locator('#countdown')).toBeHidden();
+  await expect(page.locator('#tool-panel')).toBeHidden();
   await page.waitForTimeout(1200); await expect(page.locator('.photo-card')).toHaveCount(0);
   await page.locator('#mode-nav [data-mode=painting]').click(); await expect(page.locator('body')).toHaveAttribute('data-mode','photobooth');
   await page.locator('#start-camera').click();

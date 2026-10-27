@@ -436,7 +436,7 @@ async function savePhoto(canvas, kind = mode) {
     actions.append(download, print, remove, confirmDelete, keep); card.append(image, title, warning, actions);
     $('saved-photos').prepend(card); galleryIndex = 0; showGalleryPhoto();
     pendingSave = null;
-    feedback('Foto siap. Pilih Hasil di atas untuk melihat, mengunduh, atau mencetak.');
+    feedback('Foto siap di Hasil.');
   } catch {
     feedback('Foto gagal diproses. Gambar tetap disimpan sementara; pilih Coba simpan foto.', true);
   } finally {
