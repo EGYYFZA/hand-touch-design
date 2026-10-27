@@ -1,4 +1,4 @@
-﻿# EGZ — riset dan keputusan implementasi
+# EGZ — riset dan keputusan implementasi
 
 27 Oktober 2026. Fokus: alur gesture web, pemilih warna, kemampuan model, dan aksesibilitas. Ini riset teknis untuk implementasi, bukan studi pengguna atau klaim akurasi kamera.
 
@@ -13,7 +13,8 @@
 ## Keputusan desain
 
 - Biru neon `#38BDF8`, latar navy `#070D19`, panel `#0B1424`, teks `#ECF4FF`, teks sekunder `#9BAFC8`.
-- Empat mode tetap di atas. Kamera menjadi pusat, panel kanan hanya menampilkan alat/panduan mode aktif.
+- Revisi satu layar: kamera memenuhi viewport, empat mode mengambang di atas, alat mode di kanan, tanpa scroll halaman. Galeri memakai dialog satu foto dengan tombol sebelumnya/berikutnya. Tombol Alat dapat menutup panel.
+- Kursor diinterpolasi setiap animation frame dengan respons 35-65 ms sesuai jarak perpindahan; pena memakai smoothing 45 ms. Pemetaan pointer dan ekspor mengikuti crop kamera fullscreen. Angka ini keputusan UX yang diuji secara matematis, bukan hasil studi pengguna.
 - Kalibrasi dua telapak 1 detik dan percobaan telunjuk sebelum menu. Dwell 0,8 detik, progres terlihat, pilihan satu kali per gerakan, berhenti ketika tracking hilang.
 - Palet tidak berubah ketika jari sekadar melintas; posisi harus ditahan. Bentuk pratinjau hanya ditempel setelah pelepasan cubitan yang terlihat.
 - Photobooth mempunyai tiga feedback jepretan dan strip berbatas cyan, nomor foto, tipografi, serta EGZ kecil. Reduced motion mematikan flash, teks jepretan tetap muncul.
@@ -25,3 +26,5 @@
 Tujuh kueri pencarian dan pembacaan enam halaman dokumentasi resmi/primer yang relevan. Firecrawl/Exa tidak tersedia pada sesi ini; digunakan alat pencarian web yang tersedia. Satu URL Figma awal gagal, lalu URL resmi yang benar ditemukan dan dibaca. Sumber komunitas pada hasil pencarian tidak dipakai sebagai dasar klaim teknis.
 
 Tidak ada riset pengguna, contoh video gesture dari pemilik, dataset berlabel, atau pengukuran lapangan. Hasil pengujian dan batas deployment dicatat terpisah dalam `egz-audit.md`.
+
+Skill `ecc:taste` yang diminta dibaca. Skill tersebut khusus pengarahan video/musik; prinsip konsistensi arah visual dan satu aksen diterapkan ke UI biru neon, sedangkan pipeline video, BPM, warna emas, dan efek beat tidak relevan untuk studio kamera ini.

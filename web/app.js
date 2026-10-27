@@ -1,18 +1,15 @@
-import { describeHand, automaticEffect, canvasPoint, MemeLatch, distance, clamp, DwellSelector, screenPoint, shapeBounds, hsvToHex, expressionScores } from './gestures.js';
+import { describeHand, automaticEffect, canvasPoint, MemeLatch, distance, clamp, DwellSelector, screenPoint, shapeBounds, hsvToHex, expressionScores, smoothPoint } from './gestures.js';
 
 const $ = id => document.getElementById(id);
 const video = $('video'), preview = $('preview'), ctx = preview.getContext('2d');
 const raw = document.createElement('canvas'), rawCtx = raw.getContext('2d');
 const paint = document.createElement('canvas'), paintCtx = paint.getContext('2d');
 const small = document.createElement('canvas'), smallCtx = small.getContext('2d');
-const titles = { free: ['Efek Tangan', 'Peace untuk blur. Dua tangan L untuk efek area.'],
-  painting: ['Painting', 'Lukis di udara. Bentuk dengan dua tangan.'],
-  photobooth: ['Photobooth', 'Tiga jepretan, satu cerita. Siapkan pose terbaik Anda.'],
-  meme: ['Meme', 'Padukan ekspresi wajah dan gerakan tangan.'] };
+const titles = { free: 'Efek Tangan', painting: 'Painting', photobooth: 'Photobooth', meme: 'Meme' };
 let mode = 'free', erasing = false, lastPaint = null, pointerDown = false;
 let stream = null, live = false, starting = false, generation = 0;
 let worker = null, visionReady = false, visionBusy = false, hands = [], face = null, shapes = {};
-let lastVideoTime = -1, lastFreshAt = 0, lastInferenceAt = 0, lastResultAt = 0, lastRender = 0;
+let lastVideoTime = -1, lastFreshAt = 0, lastInferenceAt = 0, lastResultAt = 0;
 let session = null, fistSince = null, fistArmed = true, photos = [], photoNumber = 0;
 let latch = new MemeLatch(), renderMeme = null, printing = false;
 let phase = 'setup', calibrationStep = 'palms', manual = false;
@@ -22,6 +19,7 @@ let shutterUntil = 0, shownMeme = null, gesturePaintActive = false, lastMemeAt =
 let spatialPoint = null, lastActivationPoint = null;
 let keyboardDrawing = false;
 let saving = false, pendingSave = null;
+let cursorTarget = null, cursorFrameAt = 0, paintPoint = null, paintPointAt = 0, galleryIndex = 0;
 const memeImages = Object.fromEntries(['clingy', 'idea', 'shock', 'tongue'].map(name => {
   const image = new Image(); image.src = `memes/${name}.webp`;
   image.onerror = () => feedback(`Aset ${name} gagal dimuat. Muat ulang halaman untuk mencoba lagi.`, true);
@@ -31,22 +29,21 @@ const memeImages = Object.fromEntries(['clingy', 'idea', 'shock', 'tongue'].map(
 function enterStudio() {
   if (!live || (!manual && calibrationStep !== 'point')) return;
   phase = 'menu'; document.body.dataset.phase = phase;
-  $('calibration').hidden = true; $('setup-guide').hidden = true; $('mode-tools').hidden = false;
+  $('calibration').hidden = true; $('mode-tools').hidden = false;
   $('mode-nav').inert = false; $('menu-screen').hidden = false; $('capture').disabled = true;
-  $('gesture-scroll').hidden = false;
-  $('mode-title').textContent = 'Pilih ruangmu.'; $('section-label').textContent = 'EGZ / GESTURE STUDIO';
-  $('mode-description').textContent = 'Arahkan telunjuk ke menu. Tahan hingga lingkaran penuh.';
+  $('mode-title').textContent = 'Pilih mode';
   $('mode-title').tabIndex = -1; $('mode-title').focus({ preventScroll: true });
-  feedback(manual ? 'Kontrol tombol aktif. Gesture tetap tersedia saat model siap.' : 'Kalibrasi selesai. Pilih fitur dengan telunjuk.');
+  feedback('');
 }
 
 function resetCursor() {
   hovered?.classList.remove('gesture-hover'); hovered = null; cursorPoint = null;
   dwell = new DwellSelector(); $('gesture-cursor').hidden = true;
   spatialPoint = null; lastActivationPoint = null;
+  cursorTarget = null; cursorFrameAt = 0;
 }
 
-function gestureControls(now) {
+function trackPointer(now) {
   if (!live) return;
   if (phase === 'setup') {
     if (calibrationStep === 'palms') {
@@ -65,8 +62,14 @@ function gestureControls(now) {
   const pointing = hands.filter(hand => hand.pose === 'point');
   const hand = cursorPoint ? pointing.sort((a, b) => distance(screenPoint(a.points[8], innerWidth, innerHeight), cursorPoint) - distance(screenPoint(b.points[8], innerWidth, innerHeight), cursorPoint))[0] : pointing[0];
   if (!hand) { resetCursor(); return; }
-  const targetPoint = screenPoint(hand.points[8], innerWidth, innerHeight);
-  cursorPoint = cursorPoint ? { x: cursorPoint.x + (targetPoint.x - cursorPoint.x) * 0.55, y: cursorPoint.y + (targetPoint.y - cursorPoint.y) * 0.55 } : targetPoint;
+  cursorTarget = screenPoint(hand.points[8], innerWidth, innerHeight);
+}
+
+function gestureControls(now) {
+  if (!cursorTarget) return;
+  const elapsed = cursorFrameAt ? Math.min(now - cursorFrameAt, 50) : 16;
+  cursorFrameAt = now;
+  cursorPoint = smoothPoint(cursorPoint, cursorTarget, elapsed, cursorPoint && distance(cursorPoint, cursorTarget) > 100 ? 35 : 65);
   const cursor = $('gesture-cursor'); cursor.hidden = false; cursor.style.left = `${cursorPoint.x}px`; cursor.style.top = `${cursorPoint.y}px`;
   const hit = document.elementFromPoint(cursorPoint.x, cursorPoint.y);
   let target = hit?.closest('button, a[download], input[type=range], #color-field');
@@ -97,7 +100,7 @@ function drawShape(context, bounds) {
 }
 
 function paintGesture() {
-  if (phase !== 'studio' || mode !== 'painting' || pointerDown || keyboardDrawing) return;
+  if (phase !== 'studio' || mode !== 'painting' || pointerDown || keyboardDrawing || $('saved-section').open) return;
   if (paintTool !== 'brush') {
     const bounds = shapeBounds(hands);
     if (bounds) draftShape = bounds;
@@ -109,9 +112,11 @@ function paintGesture() {
     return;
   }
   const hand = hands[0];
-  const point = hand?.pose === 'pinch' && hand.pinch < 0.45 && !hovered && $('color-picker').hidden ? { x: hand.paint.x * paint.width, y: hand.paint.y * paint.height } : null;
+  const point = hand?.pose === 'pinch' && hand.pinch < 0.45 && !hovered && $('color-picker').hidden && !$('saved-section').open ? { x: hand.paint.x * paint.width, y: hand.paint.y * paint.height } : null;
   if (point && !gesturePaintActive) rememberPaint();
-  gesturePaintActive = !!point; drawStroke(point);
+  const now = performance.now();
+  paintPoint = point ? smoothPoint(gesturePaintActive ? paintPoint : null, point, now - paintPointAt, 45) : null;
+  paintPointAt = now; gesturePaintActive = !!point; drawStroke(paintPoint);
 }
 
 function updateColor() {
@@ -152,21 +157,18 @@ function chooseMode(next) {
   $('menu-screen').hidden = true; $('capture').disabled = !live || !!session || !!pendingSave;
   mode = next; lastPaint = null; pointerDown = false; latch = new MemeLatch(); renderMeme = null;
   draftShape = null; gesturePaintActive = false; fistSince = null; fistArmed = true; face = null; shapes = {}; showMeme(null);
-  $('mode-title').textContent = titles[mode][0]; $('mode-description').textContent = titles[mode][1];
+  $('mode-title').textContent = titles[mode];
   document.querySelectorAll('button[data-mode]').forEach(button => {
     button.classList.toggle('active', button.dataset.mode === mode);
     button.setAttribute('aria-pressed', String(button.dataset.mode === mode));
   });
   $('effects').hidden = mode !== 'free'; $('paint-tools').hidden = mode !== 'painting'; $('meme-tools').hidden = mode !== 'meme';
   $('booth-tools').hidden = mode !== 'photobooth';
+  $('tool-panel').hidden = false; $('toggle-tools').hidden = false; $('toggle-tools').setAttribute('aria-expanded', 'true');
   $('capture').replaceChildren(document.createTextNode(mode === 'photobooth' ? 'Mulai sesi ' : 'Ambil foto '));
   const key = document.createElement('kbd'); key.textContent = mode === 'photobooth' ? 'Spasi' : 'S'; $('capture').append(key);
-  $('hint').textContent = { free: 'Dua jari: blur. Dua tangan L: ubah area. Telunjuk: pilih menu.',
-    painting: 'Cubit untuk menggambar. Dua cubitan untuk ukuran bentuk. Telunjuk memilih alat di kanan.',
-    photobooth: 'Kepalkan tangan ½ detik untuk memulai. Buka tangan lagi sebelum sesi berikutnya.',
-    meme: 'Tirukan ekspresi dan posisi tangan. Tahan sebentar sampai meme muncul.' }[mode];
   $('mode-title').focus({ preventScroll: true });
-  feedback(`Mode ${titles[mode][0]} dipilih.`);
+  feedback('');
 }
 
 function startVision() {
@@ -197,9 +199,9 @@ function startVision() {
       hands = data.landmarks.map(points => describeHand(points.map(p => ({ ...p, x: 1 - p.x }))));
       face = mode === 'meme' && data.mode === mode ? data.face?.map(p => ({ ...p, x: 1 - p.x })) || null : null;
       shapes = Object.fromEntries(data.shapes.map(shape => [shape.categoryName, shape.score]));
-      gestureControls(lastResultAt);
+      trackPointer(lastResultAt);
       paintGesture();
-      if (mode === 'photobooth' && phase === 'studio') {
+      if (mode === 'photobooth' && phase === 'studio' && !$('saved-section').open) {
         const fist = hands.some(hand => hand.pose === 'fist');
         if (!fist) { fistSince = null; if (hands.length) fistArmed = true; }
         else if (fistArmed && !session) {
@@ -241,7 +243,7 @@ async function startCamera() {
       $('calibration-copy').textContent = 'Posisikan di depan kamera. Tahan hingga indikator penuh.';
     }
     if (phase === 'menu') $('menu-screen').hidden = false;
-    feedback('Kamera aktif. Tunjukkan kedua telapak untuk pengenalan tangan.'); startVision();
+    feedback(''); startVision();
     if (manual && phase === 'setup') enterStudio();
   } catch (error) {
     if (request !== generation) return;
@@ -255,7 +257,7 @@ async function startCamera() {
   }
 }
 
-function stopCamera(message = 'Kamera dimatikan. Foto yang sudah diambil tetap tersedia di bawah.') {
+function stopCamera(message = 'Kamera dimatikan. Foto tersimpan di Hasil.') {
   ++generation; live = false; starting = false;
   if (session && !session.paused) { session.remaining = Math.max(0, session.nextAt - performance.now()); session.paused = true; }
   const previous = stream; stream = null;
@@ -269,7 +271,7 @@ function stopCamera(message = 'Kamera dimatikan. Foto yang sudah diambil tetap t
   $('camera-state').textContent = 'KAMERA TIDAK AKTIF'; $('camera-state').className = 'badge';
   $('capture').disabled = true; $('stop-camera').disabled = true; $('countdown').hidden = true;
   $('tracking-state').textContent = session ? 'Sesi foto dijeda. Aktifkan kamera untuk melanjutkan.' : 'Kamera tidak aktif.';
-  $('fps').textContent = ''; feedback(message);
+  feedback(message);
 }
 
 function drawStroke(point) {
@@ -331,7 +333,8 @@ function drawMeme(name) {
   showMeme(name);
   const image = memeImages[name];
   if (!image?.complete || !image.naturalWidth) return;
-  const size = preview.height * 0.28, x = preview.width - size - 24, y = preview.height - size - 24;
+  const view = visibleCameraRect();
+  const size = Math.min(view.w, view.h) * 0.28, x = view.x + view.w - size - 24, y = view.y + view.h - size - 24;
   ctx.save(); ctx.fillStyle = '#071020'; ctx.fillRect(x - 5, y - 5, size + 10, size + 10);
   ctx.strokeStyle = '#38bdf8'; ctx.strokeRect(x - 5, y - 5, size + 10, size + 10);
   ctx.drawImage(image, x, y, size, size); ctx.restore();
@@ -375,9 +378,33 @@ function cancelSession() {
   $('shutter').hidden = true; $('shot-feedback').hidden = true;
 }
 
+function visibleCameraRect() {
+  const rect = preview.getBoundingClientRect(), scale = Math.max(rect.width / preview.width, rect.height / preview.height);
+  const w = rect.width / scale, h = rect.height / scale;
+  return { x: (preview.width - w) / 2, y: (preview.height - h) / 2, w, h };
+}
+
 function snapshot() {
-  const copy = document.createElement('canvas'); copy.width = preview.width; copy.height = preview.height;
-  copy.getContext('2d').drawImage(preview, 0, 0); return copy;
+  const view = visibleCameraRect(), copy = document.createElement('canvas');
+  copy.width = Math.round(view.w); copy.height = Math.round(view.h);
+  copy.getContext('2d').drawImage(preview, view.x, view.y, view.w, view.h, 0, 0, copy.width, copy.height); return copy;
+}
+
+function showGalleryPhoto() {
+  const cards = [...$('saved-photos').children];
+  galleryIndex = clamp(galleryIndex, 0, Math.max(0, cards.length - 1));
+  cards.forEach((card, index) => card.hidden = index !== galleryIndex);
+  $('gallery-position').textContent = `${galleryIndex + 1} / ${cards.length}`;
+  $('gallery-prev').disabled = galleryIndex === 0;
+  $('gallery-next').disabled = galleryIndex >= cards.length - 1;
+  $('photo-count').textContent = String(cards.length); $('gallery-toggle').disabled = !cards.length;
+  if (!cards.length && $('saved-section').open) $('saved-section').close();
+}
+
+function openGallery() {
+  if (!photos.length) return;
+  toggleColor(false); draftShape = null; lastPaint = null;
+  showGalleryPhoto(); $('saved-section').append($('gesture-cursor')); $('saved-section').showModal();
 }
 
 async function savePhoto(canvas, kind = mode) {
@@ -400,16 +427,16 @@ async function savePhoto(canvas, kind = mode) {
     const confirmDelete = document.createElement('button'); confirmDelete.textContent = 'Ya, hapus'; confirmDelete.hidden = true;
     const keep = document.createElement('button'); keep.textContent = 'Simpan di sesi'; keep.hidden = true;
     const warning = document.createElement('p'); warning.textContent = 'Unduh dahulu. Foto yang dihapus tidak bisa dipulihkan.'; warning.hidden = true; warning.className = 'delete-confirm';
-    remove.addEventListener('click', () => { confirmDelete.hidden = keep.hidden = warning.hidden = false; remove.hidden = true; keep.scrollIntoView({ block: 'nearest' }); });
+    remove.addEventListener('click', () => { confirmDelete.hidden = keep.hidden = warning.hidden = false; remove.hidden = true; });
     keep.addEventListener('click', () => { confirmDelete.hidden = keep.hidden = warning.hidden = true; remove.hidden = false; });
     confirmDelete.addEventListener('click', () => {
       photos = photos.filter(photo => photo !== entry); URL.revokeObjectURL(entry.url); card.remove();
-      $('saved-section').hidden = !photos.length;
+      showGalleryPhoto();
     });
     actions.append(download, print, remove, confirmDelete, keep); card.append(image, title, warning, actions);
-    $('saved-photos').prepend(card); $('saved-section').hidden = false;
+    $('saved-photos').prepend(card); galleryIndex = 0; showGalleryPhoto();
     pendingSave = null;
-    feedback('Foto siap. Unduh PNG untuk menyimpan permanen, atau klik Print.');
+    feedback('Foto siap. Pilih Hasil di atas untuk melihat, mengunduh, atau mencetak.');
   } catch {
     feedback('Foto gagal diproses. Gambar tetap disimpan sementara; pilih Coba simpan foto.', true);
   } finally {
@@ -444,6 +471,7 @@ function render(now) {
     hands = []; face = null; gesturePaintActive = false; resetCursor();
     if (!pointerDown && !keyboardDrawing) { lastPaint = null; draftShape = null; }
   }
+  gestureControls(now);
   if (visionBusy && now - lastInferenceAt > 15000) {
     worker?.terminate(); worker = null; visionReady = false; visionBusy = false;
     feedback('Pelacakan berhenti merespons. Matikan lalu aktifkan kamera untuk mencoba lagi.', true);
@@ -479,15 +507,13 @@ function render(now) {
       } else session.nextAt = now + 3000;
     }
   }
-  if (visionReady && !visionBusy && now - lastInferenceAt > 66) {
+  if (visionReady && !visionBusy && now - lastInferenceAt > 50) {
     visionBusy = true; lastInferenceAt = now; const current = worker;
     createImageBitmap(video).then(image => {
       if (worker !== current || !live) { image.close(); return; }
       current.postMessage({ type: 'frame', image, timestamp: now, face: mode === 'meme' && phase === 'studio', mode }, [image]);
     }).catch(() => { visionBusy = false; });
   }
-  if (lastRender && now - lastRender > 0) $('fps').textContent = `${Math.round(1000 / (now - lastRender))} FPS`;
-  lastRender = now;
 }
 
 document.querySelectorAll('button[data-mode]').forEach(button => button.addEventListener('click', () => chooseMode(button.dataset.mode)));
@@ -510,7 +536,7 @@ $('eraser').addEventListener('click', () => {
 document.querySelectorAll('[data-shape]').forEach(button => button.addEventListener('click', () => {
   paintTool = button.dataset.shape; draftShape = null; erasing = false; $('eraser').setAttribute('aria-pressed', 'false');
   document.querySelectorAll('[data-shape]').forEach(other => other.setAttribute('aria-pressed', String(other === button)));
-  $('paint-hint').textContent = paintTool === 'brush' ? 'Cubit untuk menggambar. Lepas untuk berhenti. Telunjuk memilih alat.' : 'Cubit dengan kedua tangan. Rentangkan untuk ukuran bentuk. Lepas cubitan untuk menempelkan. Mouse: tarik di kanvas.';
+  $('paint-hint').textContent = paintTool === 'brush' ? 'Cubit untuk menggambar. Lepas untuk berhenti.' : 'Cubit kedua tangan untuk ukuran. Lepas untuk menempelkan.';
 }));
 function toggleColor(open) { $('color-picker').hidden = !open; $('color-toggle').setAttribute('aria-expanded', String(open)); }
 $('color-toggle').addEventListener('click', () => toggleColor($('color-picker').hidden));
@@ -557,12 +583,12 @@ preview.addEventListener('pointerdown', event => {
   if (mode !== 'painting' || !live || phase !== 'studio') return;
   keyboardDrawing = false;
   pointerDown = true; lastPaint = null; preview.setPointerCapture(event.pointerId); rememberPaint();
-  const point = canvasPoint(event.clientX, event.clientY, preview.getBoundingClientRect(), preview.width, preview.height);
+  const point = canvasPoint(event.clientX, event.clientY, preview.getBoundingClientRect(), preview.width, preview.height, 'cover');
   if (paintTool === 'brush') drawStroke(point); else shapeAnchor = point;
 });
 preview.addEventListener('pointermove', event => {
   if (!pointerDown) return;
-  const point = canvasPoint(event.clientX, event.clientY, preview.getBoundingClientRect(), preview.width, preview.height);
+  const point = canvasPoint(event.clientX, event.clientY, preview.getBoundingClientRect(), preview.width, preview.height, 'cover');
   if (paintTool === 'brush') drawStroke(point);
   else if (point && shapeAnchor) draftShape = { x: Math.min(point.x, shapeAnchor.x) / paint.width, y: Math.min(point.y, shapeAnchor.y) / paint.height,
     w: Math.abs(point.x - shapeAnchor.x) / paint.width, h: Math.abs(point.y - shapeAnchor.y) / paint.height };
@@ -571,10 +597,18 @@ for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) preview
   if (name === 'pointerup' && draftShape) drawShape(paintCtx, draftShape);
   pointerDown = false; lastPaint = null; draftShape = null; shapeAnchor = null;
 });
-$('scroll-up').addEventListener('click', () => window.scrollBy({ top: -innerHeight * 0.55, behavior: 'instant' }));
-$('scroll-down').addEventListener('click', () => window.scrollBy({ top: innerHeight * 0.55, behavior: 'instant' }));
+$('toggle-tools').addEventListener('click', () => {
+  $('tool-panel').hidden = !$('tool-panel').hidden;
+  $('toggle-tools').setAttribute('aria-expanded', String(!$('tool-panel').hidden));
+});
+$('gallery-toggle').addEventListener('click', openGallery);
+$('gallery-close').addEventListener('click', () => $('saved-section').close());
+$('gallery-prev').addEventListener('click', () => { galleryIndex--; showGalleryPhoto(); });
+$('gallery-next').addEventListener('click', () => { galleryIndex++; showGalleryPhoto(); });
+$('saved-section').addEventListener('close', () => { document.body.append($('gesture-cursor')); $('gallery-toggle').focus({ preventScroll: true }); });
 
 document.addEventListener('keydown', event => {
+  if ($('saved-section').open) return;
   if (event.ctrlKey || event.metaKey || event.altKey || /INPUT|SELECT|TEXTAREA/.test(event.target.tagName) || event.repeat) return;
   if (event.code === 'Space' && event.target.tagName === 'BUTTON') return;
   if (/^[1-4]$/.test(event.key)) chooseMode(['free', 'painting', 'photobooth', 'meme'][Number(event.key) - 1]);

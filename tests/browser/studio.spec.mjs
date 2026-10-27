@@ -19,6 +19,8 @@ test('camera capture, download and Print use the selected saved image', async ({
   await expect(page.locator('.photo-card')).toHaveCount(1);
   await page.getByRole('button', { name: 'Ambil foto' }).click();
   await expect(page.locator('.photo-card')).toHaveCount(2);
+  await page.locator('#gallery-toggle').click();
+  await page.locator('#gallery-next').click();
   const card = page.locator('.photo-card').last();
   await expect(card).toBeVisible();
   const saved = await card.locator('img').getAttribute('src');
@@ -34,7 +36,9 @@ test('camera capture, download and Print use the selected saved image', async ({
   await expect(page.locator('main')).toBeHidden();
   await expect(page.locator('#print-area img')).toBeVisible();
   await page.emulateMedia({ media: 'screen' });
+  await page.locator('#gallery-close').click();
   await page.getByRole('button', { name: 'Matikan kamera' }).click();
+  await page.locator('#gallery-toggle').click();
   await expect(card.getByRole('button', { name: 'Print', exact: true })).toBeEnabled();
 });
 
@@ -66,6 +70,7 @@ test('photobooth captures exactly three frames into a printable strip', async ({
   await page.getByRole('button', { name: 'Mulai sesi' }).click();
   await expect(page.locator('#countdown')).toBeVisible();
   await expect(page.locator('.photo-card')).toHaveCount(1, { timeout: 20000 });
+  await page.locator('#gallery-toggle').click();
   const dimensions = await page.locator('.photo-card img').evaluate(img => ({ w: img.naturalWidth, h: img.naturalHeight }));
   expect(dimensions.h).toBeGreaterThan(dimensions.w);
   await expect(page.locator('#countdown')).toBeHidden();

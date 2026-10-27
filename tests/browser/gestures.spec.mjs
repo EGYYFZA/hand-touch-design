@@ -123,7 +123,7 @@ test('meme shows original monkey image only after matching face and hand, then c
 test('gesture uses an in-page confirmation to delete and can cancel it', async ({ page }) => {
   await calibrate(page); await mode(page,'free');
   await pointAt(page,'#capture'); await expect(page.locator('.photo-card')).toHaveCount(1);
-  await pose(page,[]); await page.locator('#saved-section').scrollIntoViewIfNeeded();
+  await pointAt(page,'#gallery-toggle'); await expect(page.locator('#saved-section')).toBeVisible();
   await pointAt(page,'.photo-card button:text-is("Hapus")'); await expect(page.getByRole('button',{name:'Ya, hapus'})).toBeVisible();
   await pointAt(page,'.photo-card button:text-is("Simpan di sesi")'); await expect(page.getByRole('button',{name:'Ya, hapus'})).toBeHidden();
   await pointAt(page,'.photo-card button:text-is("Hapus")'); await expect(page.getByRole('button',{name:'Ya, hapus'})).toBeVisible();

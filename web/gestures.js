@@ -85,11 +85,17 @@ export function automaticEffect(hands) {
   return { name: peace ? 'blur' : 'none', radius: peace ? 4 + clamp(peace.gap, 0, 1.4) * 10 : 0 };
 }
 
-export function canvasPoint(clientX, clientY, rect, width, height) {
-  const scale = Math.min(rect.width / width, rect.height / height);
+export function canvasPoint(clientX, clientY, rect, width, height, fit = 'contain') {
+  const scale = (fit === 'cover' ? Math.max : Math.min)(rect.width / width, rect.height / height);
   const x = (clientX - rect.left - (rect.width - width * scale) / 2) / scale;
   const y = (clientY - rect.top - (rect.height - height * scale) / 2) / scale;
   return x >= 0 && x <= width && y >= 0 && y <= height ? { x, y } : null;
+}
+
+export function smoothPoint(previous, target, elapsed, response = 60) {
+  if (!previous) return { ...target };
+  const alpha = 1 - Math.exp(-Math.max(0, elapsed) / response);
+  return { x: previous.x + (target.x - previous.x) * alpha, y: previous.y + (target.y - previous.y) * alpha };
 }
 
 export class MemeLatch {
