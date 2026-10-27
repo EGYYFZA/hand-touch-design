@@ -1,5 +1,8 @@
 # Semua angka yang bisa disetel. Ubah di sini, jangan di dalam kode.
 
+ui:
+  reduced_motion: false  # true: matikan animasi hover dan penghalusan kursor menu
+
 camera:
   index: 0
   width: 1280

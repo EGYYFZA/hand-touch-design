@@ -55,13 +55,13 @@ class FreeMode(Mode):
         return frame
 
     def effect_label(self) -> str:
-        return self._effect
+        return {"blur_full": "Blur layar", "blur_box": "Blur area", "mosaic_box": "Mosaik", "flip_box": "Putar 180"}.get(self._effect, "Siap")
 
     def hint(self) -> str:
-        return "peace = blur   |   dua L tegak = kotak   |   L tegak + terbalik = mosaik   |   dua L terbalik = flip 180"
+        return "Peace: blur | Dua L atas: blur area | L beda arah: mosaik | Dua L bawah: putar"
 
     def status(self) -> str:
-        return f"efek: {self._effect or '-'}"
+        return f"Efek: {self.effect_label()}"
 
     def handle_key(self, key: int) -> None:
         if key in (ord("k"), ord("K")):
@@ -69,5 +69,5 @@ class FreeMode(Mode):
         elif key in (ord("b"), ord("B")):
             self.show_roi = not self.show_roi
 
-    def snapshot(self, frame: np.ndarray) -> tuple[np.ndarray, dict]:
+    def snapshot(self, frame: np.ndarray | None) -> tuple[np.ndarray | None, dict]:
         return frame, {"mode": self.id, "effect": self._effect}

@@ -7,6 +7,7 @@ bukan menumpuknya.
 from __future__ import annotations
 
 import threading
+import time
 
 import cv2
 import numpy as np
@@ -25,6 +26,8 @@ class CameraSource:
         self._lock = threading.Lock()
         self._thread: threading.Thread | None = None
         self._running = False
+        self._stop_event = threading.Event()
+        self._last_frame_at = 0.0
 
     # ---------- resolusi ----------
 
@@ -73,8 +76,11 @@ class CameraSource:
             raise RuntimeError(f"kamera indeks {self.index} terbuka tapi tidak mengirim frame.")
 
         self._cap = cap
-        self._frame = self._prepare(frame)
+        with self._lock:
+            self._frame = self._prepare(frame)
+            self._last_frame_at = time.monotonic()
         self._running = True
+        self._stop_event.clear()
         self._thread = threading.Thread(target=self._loop, name="camera", daemon=True)
         self._thread.start()
         return self
@@ -86,10 +92,15 @@ class CameraSource:
         while self._running and self._cap is not None:
             ok, frame = self._cap.read()
             if not ok or frame is None:
+                with self._lock:
+                    self._frame = None
+                    self._last_frame_at = 0.0
+                self._stop_event.wait(0.05)
                 continue
             prepared = self._prepare(frame)
             with self._lock:
                 self._frame = prepared
+                self._last_frame_at = time.monotonic()
 
     def read(self) -> np.ndarray | None:
         """Salinan frame terbaru, atau None kalau belum ada.
@@ -99,13 +110,19 @@ class CameraSource:
         """
         with self._lock:
             frame = self._frame
+            if time.monotonic() - self._last_frame_at > 1.0:
+                return None
         return None if frame is None else frame.copy()
 
     def stop(self) -> None:
         self._running = False
+        self._stop_event.set()
         if self._thread is not None:
             self._thread.join(timeout=1.0)
             self._thread = None
         if self._cap is not None:
             self._cap.release()
             self._cap = None
+        with self._lock:
+            self._frame = None
+            self._last_frame_at = 0.0

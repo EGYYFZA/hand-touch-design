@@ -179,8 +179,7 @@ class PaintingMode(Mode):
         return "penghapus" if self.eraser else f"kuas {self.thickness}px"
 
     def hint(self) -> str:
-        return ("cubit jempol+telunjuk untuk menggambar   |   cubit di kotak warna "
-                "untuk memilih   |   [ ] tebal kuas   |   R kosongkan")
+        return "Cubit: gambar / pilih warna | E: hapus | [ ]: kuas | R: bersihkan"
 
     def status(self) -> str:
         if self.eraser:
@@ -200,5 +199,5 @@ class PaintingMode(Mode):
             self.eraser = False
             self.color_index = (self.color_index + 1) % len(self.palette)
 
-    def snapshot(self, frame: np.ndarray) -> tuple[np.ndarray, dict]:
-        return self._blend(frame), {"mode": self.id, "color_index": self.color_index}
+    def snapshot(self, frame: np.ndarray | None) -> tuple[np.ndarray | None, dict]:
+        return frame, {"mode": self.id, "color_index": self.color_index}
