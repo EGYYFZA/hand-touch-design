@@ -25,6 +25,6 @@
 
 Tujuh kueri pencarian dan pembacaan enam halaman dokumentasi resmi/primer yang relevan. Firecrawl/Exa tidak tersedia pada sesi ini; digunakan alat pencarian web yang tersedia. Satu URL Figma awal gagal, lalu URL resmi yang benar ditemukan dan dibaca. Sumber komunitas pada hasil pencarian tidak dipakai sebagai dasar klaim teknis.
 
-Tidak ada riset pengguna, contoh video gesture dari pemilik, dataset berlabel, atau pengukuran lapangan. Hasil pengujian dan batas deployment dicatat terpisah dalam `egz-audit.md`.
+Tidak ada riset pengguna, contoh video gesture dari pemilik, dataset berlabel, atau pengukuran lapangan. Hasil pengujian dan batas deployment dicatat terpisah dalam `release-audit.md`.
 
 Skill `ecc:taste` yang diminta dibaca. Skill tersebut khusus pengarahan video/musik; prinsip konsistensi arah visual dan satu aksen diterapkan ke UI biru neon, sedangkan pipeline video, BPM, warna emas, dan efek beat tidak relevan untuk studio kamera ini.
