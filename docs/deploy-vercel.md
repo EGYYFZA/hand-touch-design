@@ -66,7 +66,8 @@ request rather than rewriting main history. No data migration is needed.
 
 The repository was already public before this work. Its original commit includes
 camera PNGs under captures/, and former meme PNGs had no provenance record. The
-current tree excludes those files, but old commits remain accessible. Review
+current tree excludes camera captures and original PNGs, but includes the four
+requested monkey WebP derivatives in web/memes/. Old commits remain accessible. Review
 that history before advertising a public release. Removing it would rewrite
 public Git history and invalidate existing clones/forks; it is not done by this
 release. A GitHub source archive of the new commit contains the cleaned

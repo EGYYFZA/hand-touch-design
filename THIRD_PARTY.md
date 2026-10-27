@@ -31,8 +31,11 @@ The web build hosts model and runtime files on the same origin. Its production
 Content-Security-Policy disallows external connections. No application endpoint
 receives camera frames or captured images.
 
-The four original meme PNGs had no recorded provenance. They are excluded from
-the current source release and replaced by programmatically drawn project
-stickers. A private local backup under .local-assets/ is ignored by Git.
-Older public Git commits may still contain those images and camera captures;
+The four monkey images in `web/memes/` are optimized WebP copies of the
+user-supplied originals in `.local-assets/original-memes/`, restored for the
+requested web experience. They are not generated project stickers and are not
+covered by the code's MIT license. Their original creator/license has not been
+recorded. The private originals remain excluded; the four WebP derivatives are
+included in the web build. No camera captures are included.
+Older public Git commits may still contain original images and camera captures;
 deleting files at HEAD does not remove them from history.

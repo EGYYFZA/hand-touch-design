@@ -13,6 +13,7 @@ test('rebuilding removes stale files and publishes only the web allowlist', asyn
   await assert.rejects(access(stale), { code: 'ENOENT' });
   await access(resolve(root, 'dist/index.html'));
   await access(resolve(root, 'dist/models/hand_landmarker.task'));
+  for (const meme of ['clingy', 'idea', 'shock', 'tongue']) await access(resolve(root, `dist/memes/${meme}.webp`));
   const published = await readdir(resolve(root, 'dist'));
   for (const privateName of ['captures', '.env', '.git', '.venv', '.local-assets', 'core']) {
     assert.equal(published.includes(privateName), false, privateName);

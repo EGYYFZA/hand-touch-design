@@ -1,0 +1,77 @@
+{
+  "date": "2026-10-27",
+  "environment": "Windows, headless Chromium, localhost, no throttling, synthetic camera pixels; real CPU MediaPipe inference",
+  "initialLoads": [
+    {
+      "fcpMs": 120,
+      "lcpMs": 120,
+      "cls": 0,
+      "ttfbMs": 1.6000001430511475,
+      "transferredBytes": 205119,
+      "requests": 8
+    },
+    {
+      "fcpMs": 112,
+      "lcpMs": 112,
+      "cls": 0,
+      "ttfbMs": 1.7999999523162842,
+      "transferredBytes": 205119,
+      "requests": 8
+    },
+    {
+      "fcpMs": 112,
+      "lcpMs": 112,
+      "cls": 0,
+      "ttfbMs": 1.9000000953674316,
+      "transferredBytes": 205119,
+      "requests": 8
+    }
+  ],
+  "inference": {
+    "free": {
+      "samples": 41,
+      "firstMs": 388.50000004768367,
+      "p50Ms": 50.699999952316375,
+      "p95Ms": 65.59999995231624
+    },
+    "meme": {
+      "samples": 40,
+      "firstMs": 512.4999999523161,
+      "p50Ms": 62.80000000000018,
+      "p95Ms": 92.5000000476839
+    }
+  },
+  "bundles": {
+    "web/app.js": {
+      "beforeBytes": 20795,
+      "afterBytes": 38911,
+      "beforeGzipBytes": 6783,
+      "afterGzipBytes": 11241
+    },
+    "web/gestures.js": {
+      "beforeBytes": 3113,
+      "afterBytes": 5956,
+      "beforeGzipBytes": 1193,
+      "afterGzipBytes": 2141
+    },
+    "web/styles.css": {
+      "beforeBytes": 8086,
+      "afterBytes": 17407,
+      "beforeGzipBytes": 2558,
+      "afterGzipBytes": 4637
+    }
+  },
+  "pageErrors": [],
+  "inp": "Not measured: field INP requires representative interactions; no field performance claim.",
+  "dwellMs": 800,
+  "memeAssetsBytes": 128976,
+  "modelBytes": {
+    "hand": 7819105,
+    "face": 3758596
+  },
+  "limits": [
+    "Synthetic camera has no human hands/faces. These timings are not recognition accuracy or worst-case face inference.",
+    "New browser contexts; OS disk cache is warm. Network and CPU are not throttled.",
+    "Initial-page transfer excludes on-demand MediaPipe models/WASM."
+  ]
+}

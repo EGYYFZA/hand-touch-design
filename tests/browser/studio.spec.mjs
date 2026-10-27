@@ -7,8 +7,14 @@ async function camera(page) {
   await expect(page.locator('#video')).toHaveJSProperty('readyState', 4);
 }
 
-test('camera capture, download and Print use the selected saved image', async ({ page }) => {
+async function manualStudio(page) {
   await camera(page);
+  await page.locator('#manual-access').click();
+  await page.locator('#mode-nav [data-mode=free]').click();
+}
+
+test('camera capture, download and Print use the selected saved image', async ({ page }) => {
+  await manualStudio(page);
   await page.getByRole('button', { name: 'Ambil foto' }).click();
   await expect(page.locator('.photo-card')).toHaveCount(1);
   await page.getByRole('button', { name: 'Ambil foto' }).click();
@@ -55,8 +61,8 @@ test('denied camera access leaves an actionable retry', async ({ page }) => {
 });
 
 test('photobooth captures exactly three frames into a printable strip', async ({ page }) => {
-  await camera(page);
-  await page.locator('[data-mode=photobooth]').click();
+  await manualStudio(page);
+  await page.locator('#mode-nav [data-mode=photobooth]').click();
   await page.getByRole('button', { name: 'Mulai sesi' }).click();
   await expect(page.locator('#countdown')).toBeVisible();
   await expect(page.locator('.photo-card')).toHaveCount(1, { timeout: 20000 });
@@ -67,14 +73,15 @@ test('photobooth captures exactly three frames into a printable strip', async ({
 
 test('mobile workspace fits and preserves keyboard/native controls', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
+  await manualStudio(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.locator('[data-mode=painting]').click();
+  await page.locator('#mode-nav [data-mode=painting]').click();
   await expect(page.locator('#paint-tools')).toBeVisible();
   await page.keyboard.press('3');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Photobooth');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   expect(await page.locator('#capture').evaluate(button => getComputedStyle(button).transitionDuration)).toBe('0s');
+  await page.evaluate(() => { document.activeElement.blur(); window.scrollTo(0, 0); });
   await page.screenshot({ path: 'docs/ui-preview/web-mobile.png', fullPage: true });
 });
 

@@ -1,4 +1,4 @@
-import { describeHand, automaticEffect, canvasPoint, MemeLatch, distance, clamp } from './gestures.js';
+import { describeHand, automaticEffect, canvasPoint, MemeLatch, distance, clamp, DwellSelector, screenPoint, shapeBounds, hsvToHex, expressionScores } from './gestures.js';
 
 const $ = id => document.getElementById(id);
 const video = $('video'), preview = $('preview'), ctx = preview.getContext('2d');
@@ -6,15 +6,128 @@ const raw = document.createElement('canvas'), rawCtx = raw.getContext('2d');
 const paint = document.createElement('canvas'), paintCtx = paint.getContext('2d');
 const small = document.createElement('canvas'), smallCtx = small.getContext('2d');
 const titles = { free: ['Efek Tangan', 'Peace untuk blur. Dua tangan L untuk efek area.'],
-  painting: ['Painting', 'Cubit atau gunakan mouse untuk menggambar.'],
+  painting: ['Painting', 'Lukis di udara. Bentuk dengan dua tangan.'],
   photobooth: ['Photobooth', 'Tiga jepretan, satu cerita. Siapkan pose terbaik Anda.'],
   meme: ['Meme', 'Padukan ekspresi wajah dan gerakan tangan.'] };
-let mode = 'free', effect = 'auto', meme = 'auto', erasing = false, lastPaint = null, pointerDown = false;
+let mode = 'free', erasing = false, lastPaint = null, pointerDown = false;
 let stream = null, live = false, starting = false, generation = 0;
 let worker = null, visionReady = false, visionBusy = false, hands = [], face = null, shapes = {};
 let lastVideoTime = -1, lastFreshAt = 0, lastInferenceAt = 0, lastResultAt = 0, lastRender = 0;
 let session = null, fistSince = null, fistArmed = true, photos = [], photoNumber = 0;
 let latch = new MemeLatch(), renderMeme = null, printing = false;
+let phase = 'setup', calibrationStep = 'palms', manual = false;
+let dwell = new DwellSelector(), calibrationHold = new DwellSelector(), cursorPoint = null, hovered = null;
+let paintTool = 'brush', draftShape = null, undoImage = null, hue = 198, saturation = 0.77, brightness = 0.97;
+let shutterUntil = 0, shownMeme = null, gesturePaintActive = false, lastMemeAt = 0;
+let spatialPoint = null, lastActivationPoint = null;
+let keyboardDrawing = false;
+let saving = false, pendingSave = null;
+const memeImages = Object.fromEntries(['clingy', 'idea', 'shock', 'tongue'].map(name => {
+  const image = new Image(); image.src = `memes/${name}.webp`;
+  image.onerror = () => feedback(`Aset ${name} gagal dimuat. Muat ulang halaman untuk mencoba lagi.`, true);
+  return [name, image];
+}));
+
+function enterStudio() {
+  if (!live || (!manual && calibrationStep !== 'point')) return;
+  phase = 'menu'; document.body.dataset.phase = phase;
+  $('calibration').hidden = true; $('setup-guide').hidden = true; $('mode-tools').hidden = false;
+  $('mode-nav').inert = false; $('menu-screen').hidden = false; $('capture').disabled = true;
+  $('gesture-scroll').hidden = false;
+  $('mode-title').textContent = 'Pilih ruangmu.'; $('section-label').textContent = 'EGZ / GESTURE STUDIO';
+  $('mode-description').textContent = 'Arahkan telunjuk ke menu. Tahan hingga lingkaran penuh.';
+  $('mode-title').tabIndex = -1; $('mode-title').focus({ preventScroll: true });
+  feedback(manual ? 'Kontrol tombol aktif. Gesture tetap tersedia saat model siap.' : 'Kalibrasi selesai. Pilih fitur dengan telunjuk.');
+}
+
+function resetCursor() {
+  hovered?.classList.remove('gesture-hover'); hovered = null; cursorPoint = null;
+  dwell = new DwellSelector(); $('gesture-cursor').hidden = true;
+  spatialPoint = null; lastActivationPoint = null;
+}
+
+function gestureControls(now) {
+  if (!live) return;
+  if (phase === 'setup') {
+    if (calibrationStep === 'palms') {
+      const palms = hands.length === 2 && hands.every(hand => hand.pose === 'open' && hand.palm > 0.07 && hand.points.every(p => p.x > 0.02 && p.x < 0.98 && p.y > 0.02 && p.y < 0.98));
+      const ready = calibrationHold.update(palms ? 'palms' : null, now, 1000);
+      $('calibration-progress').value = calibrationHold.progress;
+      if (ready) {
+        calibrationStep = 'point'; $('calibration-step').textContent = '02 / COBA KURSOR';
+        $('calibration-title').textContent = 'Sekarang, satu telunjuk.';
+        $('calibration-copy').textContent = 'Arahkan kursor ke tombol di bawah. Tahan 0,8 detik.';
+        $('calibration-progress').hidden = true; $('enter-studio').hidden = false;
+      }
+      return;
+    }
+  }
+  const pointing = hands.filter(hand => hand.pose === 'point');
+  const hand = cursorPoint ? pointing.sort((a, b) => distance(screenPoint(a.points[8], innerWidth, innerHeight), cursorPoint) - distance(screenPoint(b.points[8], innerWidth, innerHeight), cursorPoint))[0] : pointing[0];
+  if (!hand) { resetCursor(); return; }
+  const targetPoint = screenPoint(hand.points[8], innerWidth, innerHeight);
+  cursorPoint = cursorPoint ? { x: cursorPoint.x + (targetPoint.x - cursorPoint.x) * 0.55, y: cursorPoint.y + (targetPoint.y - cursorPoint.y) * 0.55 } : targetPoint;
+  const cursor = $('gesture-cursor'); cursor.hidden = false; cursor.style.left = `${cursorPoint.x}px`; cursor.style.top = `${cursorPoint.y}px`;
+  const hit = document.elementFromPoint(cursorPoint.x, cursorPoint.y);
+  let target = hit?.closest('button, a[download], input[type=range], #color-field');
+  if (target?.disabled || target?.closest('[inert]') || (phase === 'setup' && target?.id !== 'enter-studio')) target = null;
+  // A new control appearing under a held finger must not activate by itself.
+  if (lastActivationPoint && distance(cursorPoint, lastActivationPoint) < 20) target = null;
+  else lastActivationPoint = null;
+  if (hovered !== target) { hovered?.classList.remove('gesture-hover'); hovered = target; hovered?.classList.add('gesture-hover'); }
+  if (target?.matches('input[type=range], #color-field')) {
+    if (!spatialPoint || distance(cursorPoint, spatialPoint) > 14) { spatialPoint = { ...cursorPoint }; dwell.update(null, now); }
+    if (dwell.update(target, now)) setSpatialControl(target, cursorPoint.x, cursorPoint.y);
+  } else {
+    spatialPoint = null;
+    if (dwell.update(target, now)) { lastActivationPoint = { ...cursorPoint }; target.click(); }
+  }
+  $('cursor-progress').style.strokeDashoffset = String(100 - dwell.progress * 100);
+}
+
+function rememberPaint() { undoImage = paintCtx.getImageData(0, 0, paint.width, paint.height); $('undo-paint').disabled = false; }
+
+function drawShape(context, bounds) {
+  const x = bounds.x * paint.width, y = bounds.y * paint.height, w = bounds.w * paint.width, h = bounds.h * paint.height;
+  context.save(); context.strokeStyle = $('paint-color').value; context.lineWidth = Number($('brush-size').value); context.lineJoin = 'round'; context.beginPath();
+  if (paintTool === 'circle') context.arc(x + w / 2, y + h / 2, Math.max(Math.min(w, h) / 2, 0.1), 0, Math.PI * 2);
+  else if (paintTool === 'square') context.rect(x, y, w, h);
+  else { context.moveTo(x + w / 2, y); context.lineTo(x + w, y + h); context.lineTo(x, y + h); context.closePath(); }
+  context.stroke(); context.restore();
+}
+
+function paintGesture() {
+  if (phase !== 'studio' || mode !== 'painting' || pointerDown || keyboardDrawing) return;
+  if (paintTool !== 'brush') {
+    const bounds = shapeBounds(hands);
+    if (bounds) draftShape = bounds;
+    else if (draftShape) {
+      // Tracking loss cancels a preview; an observed release commits it.
+      if (hands.length === 2) { rememberPaint(); drawShape(paintCtx, draftShape); }
+      draftShape = null;
+    }
+    return;
+  }
+  const hand = hands[0];
+  const point = hand?.pose === 'pinch' && hand.pinch < 0.45 && !hovered && $('color-picker').hidden ? { x: hand.paint.x * paint.width, y: hand.paint.y * paint.height } : null;
+  if (point && !gesturePaintActive) rememberPaint();
+  gesturePaintActive = !!point; drawStroke(point);
+}
+
+function updateColor() {
+  const color = hsvToHex(hue, saturation, brightness); $('paint-color').value = color;
+  $('color-swatch').style.background = color; $('color-value').textContent = color.toUpperCase();
+  $('color-field').style.background = `linear-gradient(0deg,#000,transparent),linear-gradient(90deg,#fff,transparent),hsl(${hue} 100% 50%)`;
+  $('color-marker').style.left = `${saturation * 100}%`; $('color-marker').style.top = `${(1 - brightness) * 100}%`;
+  $('color-field').setAttribute('aria-valuenow', String(Math.round(saturation * 100)));
+  $('color-field').setAttribute('aria-valuetext', `Saturasi ${Math.round(saturation * 100)}%, kecerahan ${Math.round(brightness * 100)}%`);
+}
+
+function setSpatialControl(element, x, y) {
+  const rect = element.getBoundingClientRect();
+  if (element.id === 'color-field') { saturation = clamp((x - rect.left) / rect.width, 0, 1); brightness = 1 - clamp((y - rect.top) / rect.height, 0, 1); updateColor(); }
+  else { element.value = Math.round(Number(element.min) + clamp((x - rect.left) / rect.width, 0, 1) * (Number(element.max) - Number(element.min))); element.dispatchEvent(new Event('input')); }
+}
 
 function feedback(message, error = false) {
   $('feedback').textContent = message;
@@ -28,24 +141,31 @@ function resize(width, height) {
   if (paint.width) previous.getContext('2d').drawImage(paint, 0, 0);
   for (const canvas of [raw, preview, paint]) { canvas.width = width; canvas.height = height; }
   if (previous.width) paintCtx.drawImage(previous, 0, 0, width, height);
-  lastPaint = null;
+  lastPaint = null; undoImage = null; draftShape = null; $('undo-paint').disabled = true;
 }
 
 function chooseMode(next) {
+  if (phase === 'setup' || !titles[next]) return;
   if (session && next !== mode) { feedback('Selesaikan atau batalkan sesi foto sebelum pindah mode.', true); return; }
+  phase = 'studio'; document.body.dataset.phase = phase; document.body.dataset.mode = next;
+  keyboardDrawing = false;
+  $('menu-screen').hidden = true; $('capture').disabled = !live || !!session || !!pendingSave;
   mode = next; lastPaint = null; pointerDown = false; latch = new MemeLatch(); renderMeme = null;
+  draftShape = null; gesturePaintActive = false; fistSince = null; fistArmed = true; face = null; shapes = {}; showMeme(null);
   $('mode-title').textContent = titles[mode][0]; $('mode-description').textContent = titles[mode][1];
-  document.querySelectorAll('[data-mode]').forEach(button => {
+  document.querySelectorAll('button[data-mode]').forEach(button => {
     button.classList.toggle('active', button.dataset.mode === mode);
     button.setAttribute('aria-pressed', String(button.dataset.mode === mode));
   });
   $('effects').hidden = mode !== 'free'; $('paint-tools').hidden = mode !== 'painting'; $('meme-tools').hidden = mode !== 'meme';
+  $('booth-tools').hidden = mode !== 'photobooth';
   $('capture').replaceChildren(document.createTextNode(mode === 'photobooth' ? 'Mulai sesi ' : 'Ambil foto '));
   const key = document.createElement('kbd'); key.textContent = mode === 'photobooth' ? 'Spasi' : 'S'; $('capture').append(key);
-  $('hint').textContent = { free: 'Peace: blur · Dua L atas: blur area · L beda arah: mosaik · Dua L bawah: putar',
-    painting: 'Cubit untuk melukis, atau drag dengan mouse. Pilih warna, kuas, dan penghapus di atas.',
-    photobooth: 'Kepalkan tangan selama setengah detik, tekan Spasi, atau klik Mulai sesi.',
-    meme: 'Telunjuk + senyum: ide · Lidah: bleh · Jari di mulut: malu · Dua tangan + kaget: shock' }[mode];
+  $('hint').textContent = { free: 'Dua jari: blur. Dua tangan L: ubah area. Telunjuk: pilih menu.',
+    painting: 'Cubit untuk menggambar. Dua cubitan untuk ukuran bentuk. Telunjuk memilih alat di kanan.',
+    photobooth: 'Kepalkan tangan ½ detik untuk memulai. Buka tangan lagi sebelum sesi berikutnya.',
+    meme: 'Tirukan ekspresi dan posisi tangan. Tahan sebentar sampai meme muncul.' }[mode];
+  $('mode-title').focus({ preventScroll: true });
   feedback(`Mode ${titles[mode][0]} dipilih.`);
 }
 
@@ -53,30 +173,35 @@ function startVision() {
   if (worker) return;
   const current = new Worker(new URL('./vision-worker.js', import.meta.url), { type: 'module' });
   worker = current;
+  const initTimeout = setTimeout(() => failed('Waktu pemuatan model habis.'), 30000);
   const failed = message => {
     if (worker !== current) return;
+    clearTimeout(initTimeout);
     console.warn('MediaPipe initialization/inference failed:', message);
     current.terminate(); worker = null; visionReady = false; visionBusy = false;
-    $('tracking-state').textContent = 'Gestur belum tersedia; gunakan tombol.';
-    feedback('Model gestur belum bisa dimuat. Tombol tetap berfungsi. Matikan lalu aktifkan kamera untuk mencoba lagi.', true);
+    hands = []; face = null; draftShape = null; resetCursor();
+    $('tracking-state').textContent = 'Gestur belum tersedia.';
+    feedback('Model gestur gagal dimuat. Matikan lalu aktifkan kamera untuk mencoba lagi, atau gunakan kontrol tombol.', true);
   };
   current.onerror = event => failed(event.message);
   current.onmessage = ({ data }) => {
     if (worker !== current) return;
-    if (data.type === 'ready') { visionReady = true; $('tracking-state').textContent = 'Gestur siap. Tunjukkan tangan Anda.'; }
+    if (data.type === 'ready') { clearTimeout(initTimeout); visionReady = true; $('tracking-state').textContent = 'Gestur siap. Tunjukkan tangan Anda.'; }
+    else if (data.type === 'face-error') feedback('Model wajah gagal dimuat. Pindah mode lalu kembali ke Meme untuk mencoba lagi.', true);
     else if (data.type === 'error') failed(data.message);
     else if (data.type === 'result') {
-      visionBusy = false; lastResultAt = performance.now();
+      visionBusy = false;
+      if (data.mode !== mode || performance.now() - data.timestamp > 350) return;
+      if (performance.now() - lastResultAt > 350) fistSince = null;
+      lastResultAt = performance.now();
       hands = data.landmarks.map(points => describeHand(points.map(p => ({ ...p, x: 1 - p.x }))));
-      face = data.face?.map(p => ({ ...p, x: 1 - p.x })) || null;
+      face = mode === 'meme' && data.mode === mode ? data.face?.map(p => ({ ...p, x: 1 - p.x })) || null : null;
       shapes = Object.fromEntries(data.shapes.map(shape => [shape.categoryName, shape.score]));
-      if (mode === 'painting' && !pointerDown) {
-        const hand = hands[0];
-        drawStroke(hand && hand.pinch < 0.45 ? { x: hand.paint.x * paint.width, y: hand.paint.y * paint.height } : null);
-      }
-      if (mode === 'photobooth') {
+      gestureControls(lastResultAt);
+      paintGesture();
+      if (mode === 'photobooth' && phase === 'studio') {
         const fist = hands.some(hand => hand.pose === 'fist');
-        if (!fist) { fistSince = null; fistArmed = true; }
+        if (!fist) { fistSince = null; if (hands.length) fistArmed = true; }
         else if (fistArmed && !session) {
           fistSince ??= performance.now();
           if (performance.now() - fistSince > 500) { beginSession(); fistArmed = false; }
@@ -104,11 +229,20 @@ async function startCamera() {
     resize(video.videoWidth, video.videoHeight);
     live = true; lastFreshAt = performance.now(); lastVideoTime = -1;
     next.getVideoTracks()[0].addEventListener('ended', () => { if (stream === next) stopCamera('Kamera terputus. Sambungkan kembali lalu aktifkan kamera.'); });
-    $('empty-state').hidden = true; $('capture').disabled = false; $('stop-camera').disabled = false;
+    $('empty-state').hidden = true; $('capture').disabled = phase !== 'studio' || !!session || !!pendingSave; $('stop-camera').disabled = false;
     $('camera-state').textContent = 'KAMERA AKTIF'; $('camera-state').className = 'badge live';
     $('tracking-state').textContent = 'Menyiapkan model gestur...';
     if (session?.paused) { session.nextAt = performance.now() + session.remaining; session.paused = false; }
-    feedback('Kamera aktif. Ambil foto, atau pilih mode untuk mulai.'); startVision();
+    if (phase === 'setup') {
+      calibrationStep = 'palms'; calibrationHold = new DwellSelector();
+      $('calibration').hidden = false; $('calibration-progress').hidden = false; $('calibration-progress').value = 0;
+      $('enter-studio').hidden = true; $('calibration-step').textContent = '01 / KENALI TANGAN';
+      $('calibration-title').textContent = 'Buka kedua telapak tangan.';
+      $('calibration-copy').textContent = 'Posisikan di depan kamera. Tahan hingga indikator penuh.';
+    }
+    if (phase === 'menu') $('menu-screen').hidden = false;
+    feedback('Kamera aktif. Tunjukkan kedua telapak untuk pengenalan tangan.'); startVision();
+    if (manual && phase === 'setup') enterStudio();
   } catch (error) {
     if (request !== generation) return;
     const message = error.name === 'NotAllowedError' ? 'Izin kamera ditolak. Izinkan kamera melalui pengaturan situs lalu coba lagi.' :
@@ -127,6 +261,8 @@ function stopCamera(message = 'Kamera dimatikan. Foto yang sudah diambil tetap t
   const previous = stream; stream = null;
   previous?.getTracks().forEach(track => track.stop()); video.srcObject = null;
   worker?.terminate(); worker = null; visionReady = false; visionBusy = false; hands = []; face = null;
+  resetCursor(); draftShape = null; gesturePaintActive = false; latch = new MemeLatch(); showMeme(null);
+  $('calibration').hidden = true; $('menu-screen').hidden = true; $('shutter').hidden = true; $('shot-feedback').hidden = true;
   lastPaint = null; pointerDown = false; fistSince = null; fistArmed = true;
   ctx.clearRect(0, 0, preview.width, preview.height);
   $('empty-state').hidden = false; $('camera-message').textContent = message;
@@ -167,46 +303,76 @@ function drawEffect(config) {
 
 function memeScores() {
   if (!face) return {};
-  const smile = Math.max(shapes.mouthSmileLeft || 0, shapes.mouthSmileRight || 0);
-  const mouth = { x: (face[13].x + face[14].x) / 2, y: (face[13].y + face[14].y) / 2 };
-  const near = distance(face[234], face[454]) * 0.75;
-  const shock = clamp(0.75 * (shapes.jawOpen || 0) + 0.5 * Math.max(shapes.eyeWideLeft || 0, shapes.eyeWideRight || 0, shapes.browInnerUp || 0), 0, 1);
-  // shortcut: tongue uses a color heuristic; replace with a trained detector if calibrated accuracy is required.
+  // shortcut: tongue color is lighting-sensitive; replace with a trained tongue detector for calibrated accuracy.
   let tongue = 0;
   if ((shapes.jawOpen || 0) > 0.15) {
-    const size = Math.max(4, Math.round(distance(face[61], face[291]) * raw.width * 0.55));
-    const x = clamp(Math.round(mouth.x * raw.width - size / 2), 0, raw.width - size);
+    const size = clamp(Math.round(distance(face[61], face[291]) * raw.width * 0.5), 4, Math.min(raw.width, raw.height));
+    const x = clamp(Math.round((face[13].x + face[14].x) / 2 * raw.width - size / 2), 0, raw.width - size);
     const y = clamp(Math.round(face[14].y * raw.height), 0, raw.height - size);
     const pixels = rawCtx.getImageData(x, y, size, size).data;
     let pink = 0;
-    for (let i = 0; i < pixels.length; i += 4) if (pixels[i] > 80 && pixels[i] > pixels[i + 1] * 1.2 && pixels[i] > pixels[i + 2] * 1.1) pink++;
-    tongue = clamp((pink / (pixels.length / 4) - 0.18) / 0.32, 0, 1);
+    for (let i = 0; i < pixels.length; i += 4) {
+      if (pixels[i] > 90 && pixels[i + 1] > 35 && pixels[i] > pixels[i + 1] * 1.3 && pixels[i] > pixels[i + 2] * 1.15) pink++;
+    }
+    tongue = clamp((pink / (pixels.length / 4) - 0.25) / 0.4, 0, 1);
   }
-  return { idea: hands.some(hand => hand.pose === 'point' && hand.points[8].y < hand.points[5].y) ? smile : 0,
-    clingy: hands.some(hand => distance(hand.points[8], mouth) < near) ? smile : 0,
-    shock: hands.filter(hand => hand.points[0].y > mouth.y).length >= 2 ? shock : 0, tongue };
+  return expressionScores(hands, face, shapes, tongue);
+}
+
+function showMeme(name) {
+  if (shownMeme === name) return;
+  shownMeme = name;
+  const image = $('meme-image'); image.hidden = !name; $('meme-wait').hidden = !!name;
+  $('meme-name').textContent = name ? name[0].toUpperCase() + name.slice(1) : 'Menunggu ekspresi';
+  if (name) { image.src = memeImages[name].src; image.alt = `Meme monyet ${name}, sesuai ekspresi Anda`; }
 }
 
 function drawMeme(name) {
-  if (!name) return;
-  const label = { idea: 'IDE!', tongue: 'BLEH!', clingy: 'MALU...', shock: 'KAGET!' }[name];
-  ctx.save(); const w = preview.width, h = preview.height;
-  const size = Math.round(h * 0.16); ctx.font = `800 ${size}px system-ui`;
-  const tw = ctx.measureText(label).width, x = w - tw - 70, y = 70;
-  ctx.fillStyle = '#a1e6b9'; ctx.beginPath(); ctx.roundRect(x - 24, y - 24, tw + 48, size + 56, 22); ctx.fill();
-  ctx.fillStyle = '#1f2b27'; ctx.textBaseline = 'top'; ctx.fillText(label, x, y); ctx.restore();
+  showMeme(name);
+  const image = memeImages[name];
+  if (!image?.complete || !image.naturalWidth) return;
+  const size = preview.height * 0.28, x = preview.width - size - 24, y = preview.height - size - 24;
+  ctx.save(); ctx.fillStyle = '#071020'; ctx.fillRect(x - 5, y - 5, size + 10, size + 10);
+  ctx.strokeStyle = '#38bdf8'; ctx.strokeRect(x - 5, y - 5, size + 10, size + 10);
+  ctx.drawImage(image, x, y, size, size); ctx.restore();
+}
+
+function photoStrip(shots) {
+  const strip = document.createElement('canvas'), w = shots[0].width, h = shots[0].height;
+  const border = Math.round(w * 0.055), gap = Math.round(w * 0.025), header = Math.round(w * 0.13), footer = Math.round(w * 0.12);
+  strip.width = w + border * 2; strip.height = header + h * 3 + gap * 2 + footer;
+  const c = strip.getContext('2d'); c.fillStyle = '#071020'; c.fillRect(0, 0, strip.width, strip.height);
+  c.strokeStyle = '#38bdf8'; c.lineWidth = Math.max(2, w * 0.002);
+  c.strokeRect(border / 3, border / 3, strip.width - border * 2 / 3, strip.height - border * 2 / 3);
+  c.fillStyle = '#a8e4ff'; c.font = `700 ${Math.round(w * 0.036)}px sans-serif`;
+  c.fillText('AFTER HOURS / GESTURE STUDIO', border, header * 0.58);
+  c.fillStyle = '#38bdf8';
+  for (let i = 0; i < 9; i++) c.fillRect(strip.width - border - 8 * i, header * 0.8, 3, 12);
+  shots.forEach((shot, i) => {
+    const y = header + i * (h + gap); c.drawImage(shot, border, y, w, h);
+    c.strokeStyle = '#38bdf8'; c.strokeRect(border - 2, y - 2, w + 4, h + 4);
+    c.fillStyle = '#071020'; c.fillRect(border, y, w * 0.075, w * 0.05);
+    c.fillStyle = '#8cdbff'; c.font = `${Math.round(w * 0.025)}px monospace`; c.fillText(`0${i + 1}`, border + w * 0.015, y + w * 0.034);
+  });
+  c.fillStyle = '#9bafc8'; c.font = `${Math.round(w * 0.018)}px monospace`;
+  c.fillText('THREE FRAMES. ONE FREQUENCY.', border, strip.height - footer * 0.45);
+  c.fillStyle = '#38bdf8'; c.font = `bold ${Math.round(w * 0.035)}px sans-serif`; c.textAlign = 'right';
+  c.fillText('EGZ', strip.width - border, strip.height - footer * 0.4);
+  return strip;
 }
 
 function beginSession() {
-  if (!live || session) return;
+  if (!live || session || pendingSave || phase !== 'studio' || performance.now() - lastFreshAt > 1000) return;
   if (photos.length >= 12) { feedback('Sesi penuh. Unduh dan hapus beberapa foto sebelum mengambil lagi.', true); return; }
   session = { shots: [], nextAt: performance.now() + 3000, paused: false, remaining: 3000 };
+  for (const item of document.querySelectorAll('.shot-list li')) item.classList.remove('taken');
   $('cancel-session').hidden = false; $('capture').disabled = true; feedback('Sesi dimulai. Tiga foto akan diambil.');
 }
 
 function cancelSession() {
   session = null; $('countdown').hidden = true; $('cancel-session').hidden = true; $('capture').disabled = !live;
   feedback('Sesi dibatalkan. Foto tersimpan sebelumnya tetap tersedia.');
+  $('shutter').hidden = true; $('shot-feedback').hidden = true;
 }
 
 function snapshot() {
@@ -215,28 +381,41 @@ function snapshot() {
 }
 
 async function savePhoto(canvas, kind = mode) {
+  if (saving || (pendingSave && pendingSave.canvas !== canvas)) return;
   if (photos.length >= 12) { feedback('Sesi penuh. Unduh dan hapus beberapa foto sebelum mengambil lagi.', true); return; }
-  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-  if (!blob) { feedback('Foto gagal diproses. Coba ambil kembali.', true); return; }
-  if (photos.length >= 12) { feedback('Sesi penuh. Unduh dan hapus foto sebelum mengambil lagi.', true); return; }
-  const entry = { id: ++photoNumber, url: URL.createObjectURL(blob), name: `gesturecanvas-${kind}-${new Date().toISOString().replace(/[:.]/g, '-')}.png` };
-  photos.push(entry);
-  const card = document.createElement('article'); card.className = 'photo-card'; card.dataset.photo = entry.id;
-  const image = new Image(); image.src = entry.url; image.alt = `Foto ${kind} ${entry.id}`;
-  const title = document.createElement('p'); title.textContent = entry.name;
-  const actions = document.createElement('div'); actions.className = 'photo-actions';
-  const download = document.createElement('a'); download.href = entry.url; download.download = entry.name; download.textContent = 'Unduh PNG';
-  const print = document.createElement('button'); print.textContent = 'Print'; print.dataset.print = entry.id;
-  print.addEventListener('click', () => printPhoto(entry));
-  const remove = document.createElement('button'); remove.textContent = 'Hapus';
-  remove.addEventListener('click', () => {
-    if (!confirm('Hapus foto ini dari sesi browser? Unduh dahulu jika ingin menyimpannya.')) return;
-    photos = photos.filter(photo => photo !== entry); URL.revokeObjectURL(entry.url); card.remove();
-    $('saved-section').hidden = !photos.length;
-  });
-  actions.append(download, print, remove); card.append(image, title, actions);
-  $('saved-photos').prepend(card); $('saved-section').hidden = false;
-  feedback('Foto siap. Unduh PNG untuk menyimpan permanen, atau klik Print.');
+  saving = true; pendingSave = { canvas, kind }; $('capture').disabled = true; $('retry-save').disabled = true;
+  try {
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) throw new Error('PNG encoding failed');
+    const entry = { id: ++photoNumber, url: URL.createObjectURL(blob), name: `gesturecanvas-${kind}-${new Date().toISOString().replace(/[:.]/g, '-')}.png` };
+    photos.push(entry);
+    const card = document.createElement('article'); card.className = 'photo-card'; card.dataset.photo = entry.id;
+    const image = new Image(); image.src = entry.url; image.alt = `Foto ${kind} ${entry.id}`;
+    const title = document.createElement('p'); title.textContent = entry.name;
+    const actions = document.createElement('div'); actions.className = 'photo-actions';
+    const download = document.createElement('a'); download.href = entry.url; download.download = entry.name; download.textContent = 'Unduh PNG';
+    const print = document.createElement('button'); print.textContent = 'Print'; print.dataset.print = entry.id;
+    print.addEventListener('click', () => printPhoto(entry));
+    const remove = document.createElement('button'); remove.textContent = 'Hapus';
+    const confirmDelete = document.createElement('button'); confirmDelete.textContent = 'Ya, hapus'; confirmDelete.hidden = true;
+    const keep = document.createElement('button'); keep.textContent = 'Simpan di sesi'; keep.hidden = true;
+    const warning = document.createElement('p'); warning.textContent = 'Unduh dahulu. Foto yang dihapus tidak bisa dipulihkan.'; warning.hidden = true; warning.className = 'delete-confirm';
+    remove.addEventListener('click', () => { confirmDelete.hidden = keep.hidden = warning.hidden = false; remove.hidden = true; keep.scrollIntoView({ block: 'nearest' }); });
+    keep.addEventListener('click', () => { confirmDelete.hidden = keep.hidden = warning.hidden = true; remove.hidden = false; });
+    confirmDelete.addEventListener('click', () => {
+      photos = photos.filter(photo => photo !== entry); URL.revokeObjectURL(entry.url); card.remove();
+      $('saved-section').hidden = !photos.length;
+    });
+    actions.append(download, print, remove, confirmDelete, keep); card.append(image, title, warning, actions);
+    $('saved-photos').prepend(card); $('saved-section').hidden = false;
+    pendingSave = null;
+    feedback('Foto siap. Unduh PNG untuk menyimpan permanen, atau klik Print.');
+  } catch {
+    feedback('Foto gagal diproses. Gambar tetap disimpan sementara; pilih Coba simpan foto.', true);
+  } finally {
+    saving = false; $('retry-save').hidden = !pendingSave; $('retry-save').disabled = false;
+    $('capture').disabled = !live || phase !== 'studio' || !!session || !!pendingSave;
+  }
 }
 
 async function printPhoto(entry) {
@@ -250,6 +429,7 @@ async function printPhoto(entry) {
 }
 
 async function capture() {
+  if (phase !== 'studio') return;
   if (!live || performance.now() - lastFreshAt > 1000) { feedback('Kamera belum siap. Aktifkan kamera lalu coba lagi.', true); return; }
   if (mode === 'photobooth') beginSession();
   else await savePhoto(snapshot());
@@ -260,22 +440,40 @@ function render(now) {
   if (!live || video.readyState < 2) return;
   if (video.currentTime !== lastVideoTime) { lastVideoTime = video.currentTime; lastFreshAt = now; }
   if (now - lastFreshAt > 1000) { stopCamera('Kamera tidak mengirim gambar baru. Aktifkan kembali kamera.'); return; }
-  if (now - lastResultAt > 1000) { hands = []; face = null; lastPaint = null; }
+  if (now - lastResultAt > 350) {
+    hands = []; face = null; gesturePaintActive = false; resetCursor();
+    if (!pointerDown && !keyboardDrawing) { lastPaint = null; draftShape = null; }
+  }
+  if (visionBusy && now - lastInferenceAt > 15000) {
+    worker?.terminate(); worker = null; visionReady = false; visionBusy = false;
+    feedback('Pelacakan berhenti merespons. Matikan lalu aktifkan kamera untuk mencoba lagi.', true);
+  }
   rawCtx.save(); rawCtx.setTransform(-1, 0, 0, 1, raw.width, 0); rawCtx.drawImage(video, 0, 0, raw.width, raw.height); rawCtx.restore();
   ctx.drawImage(raw, 0, 0);
-  if (mode === 'free') drawEffect(effect === 'auto' ? automaticEffect(hands) : { name: effect });
-  if (mode === 'painting') ctx.drawImage(paint, 0, 0);
-  if (mode === 'meme') { renderMeme = meme === 'auto' ? latch.update(memeScores(), now) : meme; drawMeme(renderMeme); }
+  if (phase === 'studio' && mode === 'free') {
+    const config = automaticEffect(hands); drawEffect(config);
+    $('effect-state').textContent = { none: '', blur: config.rect ? 'BLUR AREA' : 'BLUR', mosaic: 'MOSAIK', flip: 'PUTAR 180°' }[config.name];
+    if (config.rect) { const r = config.rect; ctx.save(); ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2; ctx.strokeRect(r.x * preview.width, r.y * preview.height, r.w * preview.width, r.h * preview.height); ctx.restore(); }
+  } else $('effect-state').textContent = '';
+  if (mode === 'painting') { ctx.drawImage(paint, 0, 0); if (draftShape) drawShape(ctx, draftShape); }
+  if (phase === 'studio' && mode === 'meme') {
+    if (now - lastMemeAt > 100) { renderMeme = latch.update(memeScores(), now); lastMemeAt = now; }
+    drawMeme(renderMeme);
+  }
+  if (now > shutterUntil) { $('shutter').hidden = true; $('shot-feedback').hidden = true; }
   if (session && !session.paused) {
     const remaining = session.nextAt - now;
-    $('countdown').hidden = false; $('countdown').textContent = remaining > 0 ? Math.ceil(remaining / 1000) : '';
+    $('countdown').hidden = false;
+    const digit = remaining > 0 ? String(Math.ceil(remaining / 1000)) : '';
+    if ($('countdown').textContent !== digit) $('countdown').textContent = digit;
     if (remaining <= 0) {
       session.shots.push(snapshot());
+      const number = session.shots.length;
+      $('shutter').hidden = true; void $('shutter').offsetWidth; $('shutter').hidden = false;
+      shutterUntil = now + 900; $('shot-feedback').hidden = false; $('shot-feedback').textContent = `FOTO ${number} / 3 TERTANGKAP`;
+      $(`shot-${number}`).classList.add('taken');
       if (session.shots.length === 3) {
-        const strip = document.createElement('canvas'); strip.width = preview.width;
-        strip.height = preview.height * 3 + 24;
-        const stripCtx = strip.getContext('2d'); stripCtx.fillStyle = '#f5f6f3'; stripCtx.fillRect(0, 0, strip.width, strip.height);
-        session.shots.forEach((shot, i) => stripCtx.drawImage(shot, 0, i * (preview.height + 12)));
+        const strip = photoStrip(session.shots);
         session = null; $('countdown').hidden = true; $('cancel-session').hidden = true; $('capture').disabled = false;
         savePhoto(strip, 'photobooth');
       } else session.nextAt = now + 3000;
@@ -285,31 +483,97 @@ function render(now) {
     visionBusy = true; lastInferenceAt = now; const current = worker;
     createImageBitmap(video).then(image => {
       if (worker !== current || !live) { image.close(); return; }
-      current.postMessage({ type: 'frame', image, timestamp: now, face: mode === 'meme' }, [image]);
+      current.postMessage({ type: 'frame', image, timestamp: now, face: mode === 'meme' && phase === 'studio', mode }, [image]);
     }).catch(() => { visionBusy = false; });
   }
   if (lastRender && now - lastRender > 0) $('fps').textContent = `${Math.round(1000 / (now - lastRender))} FPS`;
   lastRender = now;
 }
 
-document.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => chooseMode(button.dataset.mode)));
-for (const [attribute, setter] of [['effect', value => effect = value], ['meme', value => meme = value]]) {
-  document.querySelectorAll(`[data-${attribute}]`).forEach(button => button.addEventListener('click', () => {
-    setter(button.dataset[attribute]);
-    document.querySelectorAll(`[data-${attribute}]`).forEach(other => other.setAttribute('aria-pressed', String(other === button)));
-  }));
-}
+document.querySelectorAll('button[data-mode]').forEach(button => button.addEventListener('click', () => chooseMode(button.dataset.mode)));
 $('start-camera').addEventListener('click', startCamera); $('stop-camera').addEventListener('click', () => stopCamera());
+$('enter-studio').addEventListener('click', enterStudio);
+$('manual-access').addEventListener('click', () => { manual = true; if (live) enterStudio(); else startCamera(); });
 $('capture').addEventListener('click', capture); $('cancel-session').addEventListener('click', cancelSession);
-$('clear-paint').addEventListener('click', () => { paintCtx.clearRect(0, 0, paint.width, paint.height); lastPaint = null; });
-$('eraser').addEventListener('click', () => { erasing = !erasing; $('eraser').setAttribute('aria-pressed', String(erasing)); });
-preview.addEventListener('pointerdown', event => {
-  if (mode !== 'painting' || !live) return;
-  pointerDown = true; lastPaint = null; preview.setPointerCapture(event.pointerId);
-  drawStroke(canvasPoint(event.clientX, event.clientY, preview.getBoundingClientRect(), preview.width, preview.height));
+$('retry-save').addEventListener('click', () => { if (pendingSave) savePhoto(pendingSave.canvas, pendingSave.kind); });
+$('clear-paint').addEventListener('click', () => { rememberPaint(); paintCtx.clearRect(0, 0, paint.width, paint.height); lastPaint = null; draftShape = null; });
+$('undo-paint').addEventListener('click', () => {
+  if (!undoImage) return;
+  paintCtx.clearRect(0, 0, paint.width, paint.height); paintCtx.putImageData(undoImage, 0, 0);
+  undoImage = null; lastPaint = null; draftShape = null; $('undo-paint').disabled = true;
 });
-preview.addEventListener('pointermove', event => { if (pointerDown) drawStroke(canvasPoint(event.clientX, event.clientY, preview.getBoundingClientRect(), preview.width, preview.height)); });
-for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) preview.addEventListener(name, () => { pointerDown = false; lastPaint = null; });
+$('eraser').addEventListener('click', () => {
+  erasing = !erasing; paintTool = 'brush'; draftShape = null;
+  $('eraser').setAttribute('aria-pressed', String(erasing));
+  document.querySelectorAll('[data-shape]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.shape === 'brush')));
+});
+document.querySelectorAll('[data-shape]').forEach(button => button.addEventListener('click', () => {
+  paintTool = button.dataset.shape; draftShape = null; erasing = false; $('eraser').setAttribute('aria-pressed', 'false');
+  document.querySelectorAll('[data-shape]').forEach(other => other.setAttribute('aria-pressed', String(other === button)));
+  $('paint-hint').textContent = paintTool === 'brush' ? 'Cubit untuk menggambar. Lepas untuk berhenti. Telunjuk memilih alat.' : 'Cubit dengan kedua tangan. Rentangkan untuk ukuran bentuk. Lepas cubitan untuk menempelkan. Mouse: tarik di kanvas.';
+}));
+function toggleColor(open) { $('color-picker').hidden = !open; $('color-toggle').setAttribute('aria-expanded', String(open)); }
+$('color-toggle').addEventListener('click', () => toggleColor($('color-picker').hidden));
+$('color-done').addEventListener('click', () => { toggleColor(false); $('color-toggle').focus({ preventScroll: true }); });
+$('color-hue').addEventListener('input', () => { hue = Number($('color-hue').value); updateColor(); });
+$('paint-color').addEventListener('input', () => {
+  const rgb = $('paint-color').value.match(/\w\w/g).map(value => parseInt(value, 16) / 255);
+  const max = Math.max(...rgb), min = Math.min(...rgb), d = max - min;
+  brightness = max; saturation = max ? d / max : 0;
+  if (d) hue = ((max === rgb[0] ? (rgb[1] - rgb[2]) / d : max === rgb[1] ? 2 + (rgb[2] - rgb[0]) / d : 4 + (rgb[0] - rgb[1]) / d) * 60 + 360) % 360;
+  $('color-hue').value = Math.round(hue); updateColor();
+});
+$('color-field').addEventListener('pointerdown', event => { event.currentTarget.setPointerCapture(event.pointerId); setSpatialControl(event.currentTarget, event.clientX, event.clientY); });
+$('color-field').addEventListener('pointermove', event => { if (event.buttons) setSpatialControl(event.currentTarget, event.clientX, event.clientY); });
+$('color-field').addEventListener('keydown', event => {
+  if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return;
+  event.preventDefault(); event.stopPropagation();
+  saturation = clamp(saturation + (event.key === 'ArrowRight' ? 0.02 : event.key === 'ArrowLeft' ? -0.02 : 0), 0, 1);
+  brightness = clamp(brightness + (event.key === 'ArrowUp' ? 0.02 : event.key === 'ArrowDown' ? -0.02 : 0), 0, 1); updateColor();
+});
+let shapeAnchor = null;
+let keyboardPoint = { x: 0.5, y: 0.5 }, keyboardPen = false;
+preview.addEventListener('keydown', event => {
+  if (mode !== 'painting' || !live || !['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' ','Enter','Escape'].includes(event.key)) return;
+  event.preventDefault(); event.stopPropagation();
+  keyboardDrawing = true;
+  const dx = event.key === 'ArrowRight' ? 0.02 : event.key === 'ArrowLeft' ? -0.02 : 0;
+  const dy = event.key === 'ArrowDown' ? 0.02 : event.key === 'ArrowUp' ? -0.02 : 0;
+  if (event.key === 'Escape') { keyboardPen = false; draftShape = null; lastPaint = null; return; }
+  if (paintTool === 'brush') {
+    if (event.key === ' ' || event.key === 'Enter') { keyboardPen = !keyboardPen; lastPaint = null; if (keyboardPen) rememberPaint(); }
+    keyboardPoint = { x: clamp(keyboardPoint.x + dx, 0, 1), y: clamp(keyboardPoint.y + dy, 0, 1) };
+    drawStroke(keyboardPen ? { x: keyboardPoint.x * paint.width, y: keyboardPoint.y * paint.height } : null);
+    feedback(keyboardPen ? 'Pena turun. Panah menggambar; Spasi mengangkat pena.' : 'Pena terangkat.');
+  } else {
+    draftShape ??= { x: .3, y: .3, w: .4, h: .4 };
+    if (event.key === 'Enter' || event.key === ' ') { rememberPaint(); drawShape(paintCtx, draftShape); draftShape = null; feedback('Bentuk ditempel.'); }
+    else if (event.shiftKey) { draftShape.w = clamp(draftShape.w + dx, .03, 1 - draftShape.x); draftShape.h = clamp(draftShape.h + dy, .03, 1 - draftShape.y); }
+    else { draftShape.x = clamp(draftShape.x + dx, 0, 1 - draftShape.w); draftShape.y = clamp(draftShape.y + dy, 0, 1 - draftShape.h); }
+  }
+});
+preview.addEventListener('blur', () => { keyboardDrawing = false; keyboardPen = false; lastPaint = null; draftShape = null; });
+preview.addEventListener('pointerdown', event => {
+  if (mode !== 'painting' || !live || phase !== 'studio') return;
+  keyboardDrawing = false;
+  pointerDown = true; lastPaint = null; preview.setPointerCapture(event.pointerId); rememberPaint();
+  const point = canvasPoint(event.clientX, event.clientY, preview.getBoundingClientRect(), preview.width, preview.height);
+  if (paintTool === 'brush') drawStroke(point); else shapeAnchor = point;
+});
+preview.addEventListener('pointermove', event => {
+  if (!pointerDown) return;
+  const point = canvasPoint(event.clientX, event.clientY, preview.getBoundingClientRect(), preview.width, preview.height);
+  if (paintTool === 'brush') drawStroke(point);
+  else if (point && shapeAnchor) draftShape = { x: Math.min(point.x, shapeAnchor.x) / paint.width, y: Math.min(point.y, shapeAnchor.y) / paint.height,
+    w: Math.abs(point.x - shapeAnchor.x) / paint.width, h: Math.abs(point.y - shapeAnchor.y) / paint.height };
+});
+for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) preview.addEventListener(name, () => {
+  if (name === 'pointerup' && draftShape) drawShape(paintCtx, draftShape);
+  pointerDown = false; lastPaint = null; draftShape = null; shapeAnchor = null;
+});
+$('scroll-up').addEventListener('click', () => window.scrollBy({ top: -innerHeight * 0.55, behavior: 'instant' }));
+$('scroll-down').addEventListener('click', () => window.scrollBy({ top: innerHeight * 0.55, behavior: 'instant' }));
+
 document.addEventListener('keydown', event => {
   if (event.ctrlKey || event.metaKey || event.altKey || /INPUT|SELECT|TEXTAREA/.test(event.target.tagName) || event.repeat) return;
   if (event.code === 'Space' && event.target.tagName === 'BUTTON') return;
@@ -319,7 +583,9 @@ document.addEventListener('keydown', event => {
   else if (event.key === 'Escape' && session) cancelSession();
 });
 window.addEventListener('beforeunload', event => {
-  if (photos.length || session?.shots.length) { event.preventDefault(); event.returnValue = ''; }
+  if (photos.length || session?.shots.length || undoImage || pendingSave) { event.preventDefault(); event.returnValue = ''; }
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden && live) stopCamera('Kamera dijeda karena halaman tidak aktif. Aktifkan kembali untuk melanjutkan.'); });
 requestAnimationFrame(render);
+
+updateColor();
