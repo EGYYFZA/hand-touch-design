@@ -7,7 +7,9 @@ import assert from 'node:assert/strict';
 
 const url = 'http://127.0.0.1:4173';
 const browser = await chromium.launch({ headless: true, args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
+const page = await browser.newPage();
 const report = { date: '2026-10-27', environment: 'Windows, headless Chromium, localhost, no throttling, synthetic camera pixels; real CPU MediaPipe inference', initialLoads: [], inference: {}, bundles: {} };
+report.bundleBaseline = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 const percentile = (values, p) => [...values].sort((a,b)=>a-b)[Math.min(values.length - 1, Math.ceil(values.length * p) - 1)];
 try {
   for (let run = 0; run < 3; run++) {

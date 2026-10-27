@@ -1,6 +1,6 @@
 # EGZ / Gesture Studio
 
-Studio kamera dengan kontrol tangan. Versi web memakai tema cyberpunk biru neon dan memproses video di perangkat. Foto web berada di memori tab sampai diunduh; versi desktop menyimpan ke `captures/`.
+Studio kamera dengan kontrol tangan. Versi web memakai tema cyberpunk biru neon dan memproses video di perangkat. Kamera memenuhi viewport dengan proporsi asli (tepi dipotong bila perlu), dan ekspor mengikuti potongan yang terlihat. Foto web berada di memori tab sampai diunduh; versi desktop menyimpan ke `captures/`.
 
 ## Versi browser, Print, dan Vercel
 
@@ -15,24 +15,26 @@ Buka http://127.0.0.1:4173. Di PowerShell gunakan `npm.cmd` jika `npm.ps1` diblo
 
 1. Pilih **Aktifkan kamera** dan setujui izin browser. Izin ini tidak bisa diberikan melalui gesture sebelum kamera aktif.
 2. Buka kedua telapak, terlihat utuh, selama satu detik. Lalu arahkan **satu telunjuk** ke tombol kalibrasi dan tahan **0,8 detik**.
-3. Pilih menu atau tombol dengan telunjuk yang sama. Lingkaran kursor terisi sebelum memilih. Gerakkan jari keluar dari tombol sebelum memilih lagi. Tombol panah di header menggulir halaman dengan gesture.
+3. Pilih menu atau tombol dengan telunjuk yang sama. Lingkaran kursor terisi sebelum memilih. Gerakkan jari keluar dari tombol sebelum memilih lagi. Studio selalu satu layar penuh: kamera menjadi latar, menu mengambang di atas, alat di kanan. Tidak ada scroll halaman. Gerak kursor dihaluskan mengikuti refresh layar; gerak pena dihaluskan terpisah. Tombol **Alat** menyembunyikan panel untuk ruang kamera lebih luas.
 4. Semua empat mode tersedia pada navigasi atas. **Gunakan kontrol tombol** adalah jalur aksesibilitas bila kalibrasi tangan tidak memungkinkan; klik dan keyboard tetap tersedia.
 
 | Mode web | Cara memakai |
 |---|---|
 | Efek Tangan | Dua jari menjadi blur penuh; dua L tegak menjadi blur area; L berbeda arah menjadi mosaik; dua L terbalik menjadi putar area 180 derajat. Area mengikuti kedua tangan. |
-| Painting | Cubit jempol dan telunjuk untuk menggambar, lepas untuk berhenti. Telunjuk memilih warna di panel kanan; tahan pada spektrum hue dan bidang saturasi/kecerahan untuk menetapkan warna. |
+| Painting | Cubit jempol dan telunjuk untuk menggambar, lepas untuk berhenti. Telunjuk memilih swatch di panel kanan. Pemilih warna mengambang di samping alat; tahan pada spektrum hue dan bidang saturasi/kecerahan untuk menetapkan warna. |
 | Bentuk Painting | Pilih lingkaran, kotak, atau segitiga. Cubit dengan kedua tangan, geser untuk ukuran/posisi, lalu lepas salah satu cubitan saat kedua tangan tetap terlihat. Tracking hilang membatalkan pratinjau. Urungkan memulihkan satu perubahan terakhir, termasuk Bersihkan. |
 | Photobooth | Kepalkan tangan setengah detik. Tiga hitung mundur dan tiga tanda jepretan; hasil berupa strip berframe neon dengan tanda kecil EGZ. Buka tangan sebelum sesi berikutnya. Kamera terputus menjeda sesi. |
 | Meme | Clingy: senyum + satu telunjuk di mulut. Idea: senyum + telunjuk terangkat. Shock: dua tangan berdekatan di dada + mulut terbuka dan mata/alis terangkat. Tongue: senyum + lidah terjulur. Gambar monyet asli muncul di kanan dan ikut dalam foto. |
 
-Foto web tersimpan dalam sesi tab, maksimal 12 foto/strip. **Unduh PNG** menyimpan permanen; **Print** membuka dialog browser yang tetap dikendalikan pengguna. Hapus mempunyai konfirmasi di halaman yang dapat dipilih dengan tangan. Kamera berhenti saat tab disembunyikan. Jika ekspor PNG gagal, gambar tetap ditahan di memori dan tombol **Coba simpan foto** tersedia, termasuk setelah kamera dimatikan.
+Tombol **Hasil** membuka galeri di atas kamera. Panah sebelumnya/berikutnya mengganti foto satu per satu, tanpa scroll. Foto web tersimpan dalam sesi tab, maksimal 12 foto/strip. **Unduh PNG** menyimpan permanen; **Print** membuka dialog browser yang tetap dikendalikan pengguna. Hapus mempunyai konfirmasi di halaman yang dapat dipilih dengan tangan. Kamera berhenti saat tab disembunyikan. Jika ekspor PNG gagal, gambar tetap ditahan di memori dan tombol **Coba simpan foto** tersedia, termasuk setelah kamera dimatikan.
 
 Keyboard: `1-4` memilih mode; `S` menyimpan; Spasi memulai Photobooth; `P` mencetak; Escape membatalkan sesi. Saat fokus ada pada kanvas Painting: panah memindahkan pena/bentuk, Spasi menurunkan/mengangkat pena, Shift+panah mengubah ukuran bentuk, Enter menempel bentuk, Escape membatalkan. Pemilih warna mendukung Tab dan tombol panah.
 
 **Batas deteksi:** pengenalan ini berbasis landmark dan ambang, belum dikalibrasi dengan dataset pengguna. Lidah diperkirakan dari warna di bawah mulut; posisi dada diperkirakan relatif terhadap wajah. Cahaya, warna kulit/bibir, jarak, dan oklusi dapat memengaruhi hasil. Gunakan cahaya netral dan pastikan wajah serta tangan terlihat.
 
 Aset web ada di `web/memes/*.webp`, turunan 640x640 dari `.local-assets/original-memes/*.png`. Folder asli tidak diterbitkan oleh build. Model wajah dimuat ketika pertama masuk Meme. Runtime menggunakan MediaPipe yang sudah terpasang, Canvas 2D, Web Worker, dan kontrol HTML native; tidak menambah framework atau dependensi runtime.
+
+Benchmark dapat diulang dengan `node tools/benchmark-web.mjs` saat server lokal aktif.
 
 Lihat [riset dan keputusan desain](docs/egz-research.md), [audit dan verifikasi](docs/egz-audit.md), serta [hasil benchmark](.ecc/benchmarks/egz-2026-10-27.json). Bagian setelah panduan Vercel di bawah menjelaskan **aplikasi desktop Python**, yang mempunyai UI dan pemetaan navigasi tersendiri.
 

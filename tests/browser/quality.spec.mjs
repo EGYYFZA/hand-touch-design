@@ -7,13 +7,21 @@ async function manual(page) {
 
 test('responsive layouts, readable contrast, labels, keyboard color and shape controls', async ({ page }) => {
   await manual(page);
-  for (const width of [375,768,1024,1440]) {
-    await page.setViewportSize({width,height:900});
+  for (const [width,height] of [[375,667],[390,844],[768,900],[1024,768],[1366,768],[1440,900],[844,390]]) {
+    await page.setViewportSize({width,height});
     for (const mode of ['free','painting','photobooth','meme']) {
       await page.locator(`#mode-nav [data-mode=${mode}]`).click();
-      expect(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth),`${width}/${mode}`).toBe(true);
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight),`${width}/${mode}`).toBe(true);
+      const outside=await page.evaluate(()=>[...document.querySelectorAll('button,input')].filter(e=>{
+        if(!e.getClientRects().length) return false;
+        const r=e.getBoundingClientRect(); return r.left < -1 || r.top < -1 || r.right>innerWidth+1 || r.bottom>innerHeight+1;
+      }).map(e=>e.id || e.textContent));
+      expect(outside,`${width}x${height}/${mode}`).toEqual([]);
+      const camera=await page.locator('#preview').boundingBox(); expect(camera.width).toBe(width);expect(camera.height).toBe(height);
     }
   }
+  await page.mouse.wheel(0,600); expect(await page.evaluate(()=>scrollY)).toBe(0);
+  await page.setViewportSize({width:1440,height:900});
   await page.locator('#mode-nav [data-mode=painting]').click(); await page.locator('#color-toggle').click();
   const color=await page.locator('#paint-color').inputValue();
   await page.locator('#color-field').focus(); await page.keyboard.press('ArrowLeft');
@@ -79,6 +87,7 @@ test('failed PNG export retains the full three-shot strip and can retry after ca
   await expect(page.locator('.photo-card')).toHaveCount(0); await expect(page.locator('#capture')).toBeDisabled();
   await page.locator('#stop-camera').click(); await page.locator('#retry-save').click();
   await expect(page.locator('.photo-card')).toHaveCount(1); await expect(page.locator('#retry-save')).toBeHidden();
+  await page.locator('#gallery-toggle').click();
   const matches=await page.locator('.photo-card img').evaluate(async image=>{
     await image.decode();const canvas=document.createElement('canvas');canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;
     canvas.getContext('2d').drawImage(image,0,0);return canvas.toDataURL()===window.failedPicture;

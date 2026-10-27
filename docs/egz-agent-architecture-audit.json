@@ -1,0 +1,18 @@
+﻿{
+  "schema_version": "ecc.agent-architecture-audit.report.v1",
+  "executive_verdict": {
+    "overall_health": "not_applicable",
+    "primary_failure_mode": "No LLM agent runtime is present; this is a local computer-vision application.",
+    "most_urgent_fix": "No agent-stack fix is applicable. Human camera acceptance remains unverified."
+  },
+  "scope": {
+    "target_name": "EGZ Gesture Studio",
+    "model_stack": ["MediaPipe HandLandmarker", "MediaPipe FaceLandmarker"],
+    "layers_to_audit": [],
+    "runtime_checks": ["worker execution", "stale-result rejection", "rendering and crop mapping", "photo persistence and retry"]
+  },
+  "findings": [],
+  "ordered_fix_plan": [],
+  "evidence_refs": ["web/app.js", "web/vision-worker.js", "web/gestures.js", "tests/browser/quality.spec.mjs", "docs/egz-audit.md"],
+  "limitations": ["No live human camera evaluation", "No production deployment verification", "No claim of LLM architecture health"]
+}

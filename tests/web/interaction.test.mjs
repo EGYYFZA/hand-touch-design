@@ -1,6 +1,6 @@
 ﻿import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DwellSelector, screenPoint, shapeBounds, hsvToHex, expressionScores, describeHand } from '../../web/gestures.js';
+import { DwellSelector, screenPoint, shapeBounds, hsvToHex, expressionScores, describeHand, smoothPoint, canvasPoint } from '../../web/gestures.js';
 import { hand } from '../browser/fixtures.mjs';
 
 test('dwell fires once, resets for a new target and cannot count missing frames', () => {
@@ -19,6 +19,21 @@ test('dwell fires once, resets for a new target and cannot count missing frames'
 test('point mapping reaches all screen edges without leaving the viewport', () => {
   assert.deepEqual(screenPoint({ x: 0, y: 0 }, 1440, 900), { x: 0, y: 0 });
   assert.deepEqual(screenPoint({ x: 1, y: 1 }, 1440, 900), { x: 1439, y: 899 });
+});
+
+test('fullscreen cover maps pointer to the cropped camera without stretching', () => {
+  const rect={left:0,top:0,width:400,height:300};
+  const left=canvasPoint(0,150,rect,1280,720,'cover');
+  assert.ok(Math.abs(left.x-160)<0.001); assert.equal(left.y,360);
+  assert.deepEqual(canvasPoint(200,150,rect,1280,720,'cover'),{x:640,y:360});
+});
+
+test('smoothing is independent of refresh rate and never overshoots', () => {
+  const target={x:100,y:200};
+  const one=smoothPoint({x:0,y:0},target,32);
+  const two=smoothPoint(smoothPoint({x:0,y:0},target,16),target,16);
+  assert.ok(Math.abs(one.x-two.x)<1e-9);
+  assert.ok(one.x>0 && one.x<100); assert.deepEqual(smoothPoint(null,target,16),target);
 });
 
 test('classification is mirrored consistently and only two pinches create shape bounds', () => {
