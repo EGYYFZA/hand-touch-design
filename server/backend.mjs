@@ -4,6 +4,7 @@ import { MAX_UPLOAD, CONSENT_VERSION, uuidPattern, hash, secureEqual, validateOr
 import { cookies, csrfToken, setCookie, createSession, resolveSession, mfaClient, assurance } from './sessions.mjs';
 
 const modes = new Set(['free', 'painting', 'photobooth', 'meme']);
+const knownActions = new Set(['session', 'login', 'signup', 'confirm', 'logout', 'photos', 'photo', 'upload', 'remove', 'consent', 'admin-photos', 'mfa-enroll', 'mfa-verify', 'retention']);
 const photoFields = 'id,owner_id,mode,name,bytes,width,height,created_at,expires_at';
 const fail = (status, message) => { throw Object.assign(new Error(message), { status, publicMessage: message }); };
 const json = (res, status, value) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(value)); };
@@ -67,8 +68,9 @@ export async function runRetention(service) {
   return { removed, failed, batchLimit: 100 };
 }
 
-export function createStudioHandler({ env = process.env, clientFactory = serviceClient } = {}) {
+export function createStudioHandler({ env = process.env, clientFactory = serviceClient, logger = console.warn } = {}) {
   return async function studio(req, res) {
+    let logAction = 'unknown';
     res.setHeader('Cache-Control', 'private, no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'no-referrer');
@@ -76,6 +78,7 @@ export function createStudioHandler({ env = process.env, clientFactory = service
       let cfg;
       try { cfg = configuration(env); } catch { fail(503, 'Backend belum dikonfigurasi. Hubungi pengelola.'); }
       const action = new URL(req.url, cfg.origin).searchParams.get('action') || 'session';
+      if (knownActions.has(action)) logAction = action;
       const query = new URL(req.url, cfg.origin).searchParams;
       const service = clientFactory(cfg);
       if (action === 'retention') {
@@ -231,7 +234,13 @@ export function createStudioHandler({ env = process.env, clientFactory = service
       fail(404, 'Tidak ditemukan.');
     } catch (error) {
       // Provider errors can contain SQL, URLs, or tokens. Do not return or log them.
-      if (!res.headersSent) json(res, error.status || 503, { error: error.publicMessage || 'Layanan sementara tidak tersedia. Coba lagi.' });
+      const status = error.status || 503;
+      if ([400, 401, 403, 413, 429, 503].includes(status)) {
+        const requestId = /^[A-Za-z0-9_-]{1,100}$/.test(req.requestId || '') ? req.requestId : undefined;
+        try { logger(JSON.stringify({ event: status === 503 ? 'backend.unavailable' : 'security.denied', action: logAction, status, requestId })); }
+        catch { /* A logging outage cannot expose provider details or change authorization. */ }
+      }
+      if (!res.headersSent) json(res, status, { error: error.publicMessage || 'Layanan sementara tidak tersedia. Coba lagi.' });
       else res.end();
     }
   };

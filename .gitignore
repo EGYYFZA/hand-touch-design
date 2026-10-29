@@ -11,6 +11,7 @@ __pycache__/
 *.py[cod]
 *.tsbuildinfo
 .vercel/
+.netlify/
 *.log
 .DS_Store
 Thumbs.db
@@ -45,6 +46,7 @@ Thumbs.db
 
 # Machine-local agent, IDE and cloud configuration
 .codex/
+.claude/
 .agents/
 .aws/
 .ssh/

@@ -3,6 +3,9 @@
 Tanggal: 2026-10-29 (Asia/Jakarta). Hasil: **backend akun/cloud terhubung dan
 lulus pengujian integrasi; belum siap membuka pendaftaran publik**.
 
+Pemeriksaan terbaru beserta temuan rotasi sesi, watermark dan preview otomatis:
+[audit keamanan sebelum publikasi](security-prepublish-audit.md).
+
 Koreksi alur: kamera, mode, galeri lokal dan Print tersedia sebagai tamu.
 Login untuk unduh dan galeri cloud menggunakan dialog dalam studio. Foto tamu
 tidak otomatis diunggah; persetujuan dan pilihan foto eksplisit diperlukan.
@@ -55,16 +58,17 @@ gagal, JSON null/cacat, refresh yang melewati lease, retry expired yang semula
 
 ## Hasil verifikasi akhir
 
-- npm test: **24 lulus**.
-- npm run test:e2e: **40 lulus** pada rangkaian penuh terbaru, termasuk revisi tema dan frame.
-- tools/test-backend-live.mjs: **25 pemeriksaan lulus**. Menggunakan akun/PNG
+- npm test: **26 lulus**.
+- npm run test:e2e: **42 lulus** pada rangkaian penuh terbaru, termasuk revisi tema dan frame.
+- tools/test-backend-live.mjs: **28 pemeriksaan lulus**. Menggunakan akun/PNG
   sintetis, mencakup UI browser yang benar-benar membaca foto Supabase.
 - authorization.sql dan global-counts.sql lulus pada proyek Supabase nyata;
   seluruh fixture SQL di-rollback.
 - Akun, metadata, audit dan object fixture live dibersihkan melalui tool yang
   memeriksa identitas sintetis. Tidak menggunakan foto pribadi atau mengirim email.
-- Cron aktif */5 * * * *; pengiriman terautentikasi ke Edge Function HTTP200,
-  panggilan anonim ditolak.
+- Bukti sebelumnya: cron aktif */5 * * * *, pengiriman Edge Function HTTP200
+  dan panggilan anonim ditolak. Pemeriksaan penjadwal belum diulang pada audit
+  terakhir karena automatic approval review gagal akibat batas penggunaan.
 - npm audit runtime: 0 advisory yang dilaporkan pada pemeriksaan terakhir.
 - Kredensial lokal diabaikan Git dan tidak ditemukan pada artefak frontend.
 

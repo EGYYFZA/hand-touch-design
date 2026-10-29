@@ -1,0 +1,15 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NPM_FLAGS = "--ignore-scripts"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+  external_node_modules = ["sharp"]
+
+# Secrets belong in the Netlify UI/API, production context, Functions scope.
+# No SPA catch-all: missing private paths and API routes must never serve HTML.

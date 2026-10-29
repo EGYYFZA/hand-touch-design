@@ -22,6 +22,8 @@ playwright-report
 .local-assets
 .ecc
 .codex
+.claude
+.netlify
 .agents
 .aws
 .ssh

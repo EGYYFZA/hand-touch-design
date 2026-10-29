@@ -72,11 +72,27 @@ test('session upgrade cannot resurrect a revoked session or issue cookies on fai
       async insert(row) { rows.set(row.token_hash, row); return { error: null }; },
       delete() { return { eq(key, value) {
         rows.delete(value);
-        return { ...Promise.resolve({ error: null }), then(resolve) { resolve({ error: null }); }, select: async () => revokeResult };
+        return { then(resolve) { resolve({ error: null }); }, select: async () => revokeResult };
       } }; },
     }; } };
     await assert.rejects(createSession(session, 'old-csrf', cfg, service, { setHeader() { cookies++; } }, 'revoked-old-hash', true));
     assert.equal(rows.size, 0, 'new orphan session is removed');
     assert.equal(cookies, 0, 'no upgraded cookie issued');
   }
+});
+
+test('denial monitoring excludes request bodies, raw query values and provider error details', async () => {
+  const logs = [];
+  const handler = createStudioHandler({ env: {
+    SUPABASE_URL: 'https://example.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'synthetic', SUPABASE_SECRET_KEY: 'synthetic',
+    SESSION_SECRET: randomBytes(32).toString('base64'), CRON_SECRET: randomBytes(32).toString('base64url'), APP_ORIGIN: 'https://studio.example',
+  }, clientFactory: () => ({}), logger: entry => logs.push(JSON.parse(entry)) });
+  const headers = {}; let status;
+  await handler({ method: 'POST', url: '/api/studio?action=login&secret=never-log-this', headers: { origin: 'https://evil.example' },
+    requestId: 'safe-request-id', body: { password: 'never-log-password', email: 'private@example.test' } }, {
+    setHeader(name, value) { headers[name] = value; }, getHeader(name) { return headers[name]; },
+    writeHead(code) { status = code; }, end() {},
+  });
+  assert.equal(status, 403);
+  assert.deepEqual(logs, [{ event: 'security.denied', action: 'login', status: 403, requestId: 'safe-request-id' }]);
 });

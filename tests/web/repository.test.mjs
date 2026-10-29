@@ -22,7 +22,7 @@ test('private outputs are ignored while runtime assets and safe templates remain
     'models/labels.json', 'models/another-trained-model.pkl', 'docs/ui-preview/frame.png',
     'docs_preview.png', '.ecc/benchmarks/result.json', '.env', '.env.production',
     'web/.env.local', '.aws/credentials', '.ssh/id_ed25519', '.codex/state.json',
-    '.agents/session.json', '.npmrc', 'credentials-production.json', 'service-account-prod.json',
+    '.agents/session.json', '.netlify/state.json', '.npmrc', 'credentials-production.json', 'service-account-prod.json',
     'secrets/config.json', 'signing.key', 'client.p12', 'private.pem', 'browser.har',
     'photo.print.html', '.venv/pyvenv.cfg', 'node_modules/example/index.js',
     'dist/index.html', 'test-results/trace.zip', 'playwright-report/index.html'];

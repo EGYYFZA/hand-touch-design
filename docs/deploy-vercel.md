@@ -30,7 +30,7 @@ NEXT_PUBLIC/VITE dan tanpa menyalinnya ke web atau dist:
 - SUPABASE_PUBLISHABLE_KEY
 - SUPABASE_SECRET_KEY
 - SESSION_SECRET: 32 byte acak base64, stabil agar sesi tersimpan dapat didekripsi
-- CRON_SECRET:secret berbeda untuk endpoint pemeliharaan server
+- CRON_SECRET:minimal 32 karakter acak, berbeda dari SESSION_SECRET, untuk endpoint pemeliharaan server
 - APP_ORIGIN:origin HTTPS tepat, tanpa slash akhir/path
 - ADMIN_BOOTSTRAP_EMAIL:alamat pemilik terverifikasi yang ditetapkan operator
 - UPLOADS_ENABLED:true; gunakan false untuk penghentian unggah
@@ -54,6 +54,9 @@ Halaman akun menghapus fragmen token dari tautan konfirmasi default dan tetap
 memerlukan login password untuk membuat sesi BFF.
 
 Konfigurasikan proteksi CAPTCHA/rate limit Supabase Auth sebelum signup umum.
+Widget CAPTCHA dan penerusan captchaToken melalui BFF belum tersedia; integrasikan
+bersama site key penyedia dan kebijakan CSP origin spesifik sebelum mengaktifkan
+toggle CAPTCHA provider. Toggle tanpa integrasi tersebut membuat Auth gagal.
 Mengaktifkan SMTP saja belum membuktikan perlindungan terhadap penyalahgunaan.
 Aktifkan PUBLIC_SIGNUP_ENABLED setelah pengujian produksi berhasil.
 

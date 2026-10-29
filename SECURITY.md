@@ -26,7 +26,8 @@ Guest/older photos require consent plus a specific manual cloud-save action;
 they are never uploaded just because login or consent succeeded.
 Public signup stays disabled until
 SMTP, verified sender domain, abuse protection and production hosting are ready.
-See docs/backend-integration-status.md and docs/public-backend-audit.md.
+See [the pre-publication security audit](docs/security-prepublish-audit.md),
+docs/backend-integration-status.md and docs/public-backend-audit.md.
 
 ## What belongs in GitHub
 
