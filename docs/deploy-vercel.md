@@ -1,80 +1,106 @@
-# Deploy GestureCanvas to Vercel
+# Deploy EGZ ke Vercel dengan backend Supabase
 
-The Python app opens native OpenCV windows and talks to the local camera.
-Vercel hosts the browser implementation in web/ instead. Camera capture,
-MediaPipe, painting, photo strips, download and printing run in the browser.
-There is no photo-upload API, database, authentication service or Python server
-in the web deployment. Custom desktop joblib models are not loaded by the web app.
+Frontend kamera/MediaPipe berada di dist; API same-origin berada di
+api/studio.js dan server/. Desktop Python/OpenCV tetap aplikasi terpisah.
 
-## Check locally
+## Lokal
 
-Node.js 22+ is required. On Windows PowerShell use npm.cmd when npm.ps1 is
-blocked by the machine's execution policy; no policy change is needed.
+Jalankan npm ci --ignore-scripts, salin nama variabel dari .env.example ke
+.env.local dan isi melalui saluran lokal yang aman, lalu npm run dev.
+Pada workspace pemilik, konfigurasi lokal sudah tersedia. Buka
+http://127.0.0.1:4173/account.html. Node.js 22+ diperlukan; di Windows PowerShell
+gunakan npm.cmd bila npm.ps1 diblokir.
 
-```text
-npm ci --ignore-scripts
-npm test
-npm run build
-npm run dev
-```
+npm run dev:demo menjalankan demo eksplisit tanpa akun pada port 4174.
+Mode demo hanya untuk loopback. Studio publik tetap dapat memakai kamera dan
+mode lokal saat layanan akun tidak tersedia; unduh PNG dan cloud tetap
+memerlukan akun aktif. Login serta galeri cloud pemilik memakai dialog studio.
 
-Open http://127.0.0.1:4173. Click Aktifkan kamera and grant permission. Only
-localhost or HTTPS can request the camera. A browser with WebAssembly,
-OffscreenCanvas and Web Workers is recommended (current Chrome/Edge).
-If the model cannot load, camera capture and manual mode buttons remain usable.
+## Konfigurasi hosting
 
-## Import from GitHub
+Import repository yang sudah direview ke Vercel:
+Framework Other, root repository, Build npm run build, Output dist.
+vercel.json mengatur install npm ci --ignore-scripts, header keamanan, dan
+batas fungsi 60 detik. api/studio.js diproses sebagai fungsi Node tersendiri.
 
-1. Select the tested main branch, or review and merge any subsequent feature
-   pull request before deploying it. Configure main as the production branch.
-2. In your Vercel account choose Add New → Project and import
-   https://github.com/EGYYFZA/hand-touch-design.
-3. Root Directory: repository root. Framework Preset: Other. No environment
-   variables or secrets are needed.
-4. vercel.json supplies Install Command `npm ci --ignore-scripts`, Build Command
-   `npm run build`, and Output Directory `dist`.
-5. Deploy. Open the HTTPS deployment, grant camera permission, capture a photo,
-   download PNG and select Print on that saved photo. Test your actual printer
-   and paper settings; the app opens the browser print dialog and does not
-   silently submit print jobs.
+Atur environment server berikut melalui pengaturan Vercel, tanpa prefix
+NEXT_PUBLIC/VITE dan tanpa menyalinnya ke web atau dist:
 
-Only dist/ is public. The build copies a fixed allowlist of web source,
-model/runtime files and license notices. .venv/, captures/, data/, local asset
-backups and desktop code are not published. Do not override Output Directory
-with the repository root. No camera or print credentials should be added to
-Vercel environment variables.
+- SUPABASE_URL
+- SUPABASE_PUBLISHABLE_KEY
+- SUPABASE_SECRET_KEY
+- SESSION_SECRET: 32 byte acak base64, stabil agar sesi tersimpan dapat didekripsi
+- CRON_SECRET:secret berbeda untuk endpoint pemeliharaan server
+- APP_ORIGIN:origin HTTPS tepat, tanpa slash akhir/path
+- ADMIN_BOOTSTRAP_EMAIL:alamat pemilik terverifikasi yang ditetapkan operator
+- UPLOADS_ENABLED:true; gunakan false untuk penghentian unggah
+- PUBLIC_SIGNUP_ENABLED:false sampai SMTP/proteksi Auth/hosting siap
 
-## Privacy and persistence
+Isi tiap secret langsung di hosting, bukan melalui source atau chat. Jangan
+gunakan kredensial produksi pada preview; sediakan environment/proyek
+pengujian terpisah. Kunci berprivilege melewati RLS sehingga hanya boleh berada
+di server. Browser menggunakan cookie HttpOnly dan fetch same-origin.
 
-The gallery is local to the current browser tab and limited to 12 entries.
-Download the PNG to keep it after leaving the page. Print uses the selected
-saved image, even after the camera stops. Closing a print dialog does not prove
-that printing succeeded. Closing/reloading the page discards undownloaded photos.
+## Auth dan email sebelum publik
 
-Models and WASM are served from the same origin. CSP blocks external application
-connections; host access logs are still governed by Vercel's policies. Microphone
-and geolocation are disabled by Permissions-Policy.
+Pemilik memilih Resend tetapi belum memiliki domain pengirim. Pendaftaran
+publik saat ini belum dibuka. Verifikasi domain/pengirim Resend, atur SMTP di
+Supabase, terapkan supabase/templates/confirmation.html sebagai template signup,
+lalu uji kode konfirmasi. Tetap wajibkan email confirmation.
+
+Ganti Supabase Site URL/redirect ke halaman akun pada origin produksi yang
+tepat. Saat ini Site URL lokal adalah http://127.0.0.1:4173/account.html.
+Halaman akun menghapus fragmen token dari tautan konfirmasi default dan tetap
+memerlukan login password untuk membuat sesi BFF.
+
+Konfigurasikan proteksi CAPTCHA/rate limit Supabase Auth sebelum signup umum.
+Mengaktifkan SMTP saja belum membuktikan perlindungan terhadap penyalahgunaan.
+Aktifkan PUBLIC_SIGNUP_ENABLED setelah pengujian produksi berhasil.
+
+## Retensi sudah berada di Supabase
+
+Tidak bergantung pada Vercel Cron atau komputer lokal. Job
+egz-retention-30-days berjalan setiap 5 menit melalui pg_cron/pg_net ke Edge
+Function egz-retention. Secret khusus job ada pada Edge Function dan Vault;
+JWT gateway tetap diaktifkan. Migration001–003 sudah diterapkan pada proyek EGZ.
+
+Foto cloud kedaluwarsa 30 hari untuk pengguna/admin. RLS menolak foto expired;
+fungsi menghapus file melalui Storage API dan merekonsiliasi tombstone 24 jam.
+Rotasi credential harus memperbarui environment, Edge secret dan Vault.
+Jalankan npm run retention:check untuk memeriksa pengiriman HTTP.
+
+## Validasi rilis
+
+Pemeriksaan lokal: npm test, npm run test:e2e, npm run db:test
+(operator/proyek uji), serta npm run test:backend:live dengan akun sintetis.
+Live tool memerlukan password operator lokal dan membersihkan fixture miliknya.
+
+Setelah deploy: uji halaman akun, sesi/cookie HTTPS, consent, kamera, upload,
+galeri akun yang sama lintas perangkat, penolakan user lain, admin MFA, logout,
+download dan Print. Gunakan foto sintetis. Verifikasi email nyata memerlukan
+tindakan pemilik, bukan menandai akun publik confirmed lewat Admin API.
+
+Hanya daftar berkas frontend eksplisit yang disalin ke dist. .env.local,
+secrets, captures, data, dan kode desktop tidak disalin ke build. Pastikan
+hosting tidak menyajikan repository root sebagai folder statis.
 
 ## Rollback
 
-Keep the previous successful Vercel deployment. If a new deployment fails its
-camera/print checks, promote the previous working deployment using Vercel's
-rollback controls. For code changes, revert the feature commit through a pull
-request rather than rewriting main history. No data migration is needed.
+Promosikan deployment terakhir yang sehat bila diperlukan. Untuk menonaktifkan
+unggah, gunakan UPLOADS_ENABLED=false. Jangan drop tabel/path metadata karena
+dibutuhkan untuk membersihkan Storage. Perubahan database deployed dilakukan
+melalui migration baru; jangan mengedit checksum migration lama.
 
-## Existing repository history
+Rollback ke versi tanpa akun dapat kehilangan batas login pada UI; evaluasi
+audiens dan akses sebelum melakukannya. Foto IndexedDB tidak berpindah antar
+origin/domain, dan versi lama mungkin tidak menampilkan cache akun.
 
-The repository was already public before this work. Its original commit includes
-camera PNGs under captures/, and former meme PNGs had no provenance record. The
-current tree excludes camera captures and original PNGs, but includes the four
-requested monkey WebP derivatives in web/memes/. Old commits remain accessible. Review
-that history before advertising a public release. Removing it would rewrite
-public Git history and invalidate existing clones/forks; it is not done by this
-release. A GitHub source archive of the new commit contains the cleaned
-current tree, not the old history.
+## Riwayat repository
 
-References:
-- https://vercel.com/docs/builds/configure-a-build
-- https://vercel.com/docs/project-configuration/vercel-json
-- https://developers.google.com/edge/mediapipe/solutions/vision/hand_landmarker/web_js
-- https://developer.mozilla.org/en-US/docs/Web/API/Window/print
+Dokumentasi lama menyebut foto pada riwayat Git. Checkout yang ditinjau tidak
+melacak captures dan git log --all -- captures tidak menghasilkan entry.
+Riwayat remote/arsip GitHub belum diverifikasi; tidak ada history rewrite.
+
+[Status integrasi](backend-integration-status.md) memuat hasil dan batas bukti.
+[Dokumentasi SMTP](https://supabase.com/docs/guides/auth/auth-smtp) menjelaskan
+batas layanan email bawaan.

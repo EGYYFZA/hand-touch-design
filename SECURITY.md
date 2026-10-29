@@ -6,6 +6,28 @@ If you find a vulnerability, use this repository's **Security > Report a vulnera
 
 A clean scan is not a guarantee of security. Rotate any exposed secret at its provider; removing it from the latest commit does not remove Git history.
 
+The account service uses a same-origin BFF, verified Supabase users, opaque
+HttpOnly cookies, encrypted server-side token storage, CSRF/Origin checks,
+owner-scoped metadata/Storage RLS and MFA admin membership. Browser camera
+processing stays local; cloud uploads require explicit consent. All cloud
+photos expire after 30 days and a cloud job removes physical objects through
+Storage API. Account cache is scoped by UID and cleared on logout/account switch.
+Public camera/effects/capture/Print work without login. Guest photos share a
+local browser-profile namespace until explicit login claims them; legacy demo
+photos remain separate. PNG download requests inline login. This client-side
+product gate cannot prevent screenshots, DevTools or physical access to local images.
+Guest gallery and Print use reduced, watermarked previews; verified login restores
+the original for official export. If preview generation fails, the original is
+never substituted into the guest gallery or Print. The original remains in the
+local cache for recovery and is accessible to the person controlling the browser.
+Login and MFA rotate the opaque session ID and CSRF token and revoke the replaced
+session. A revoked session cannot be upgraded through an in-flight MFA request.
+Guest/older photos require consent plus a specific manual cloud-save action;
+they are never uploaded just because login or consent succeeded.
+Public signup stays disabled until
+SMTP, verified sender domain, abuse protection and production hosting are ready.
+See docs/backend-integration-status.md and docs/public-backend-audit.md.
+
 ## What belongs in GitHub
 
 Keep source code, tests, dependency manifests and lockfiles, public configuration,

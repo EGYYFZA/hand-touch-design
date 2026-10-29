@@ -4,6 +4,15 @@ The root MIT license covers project code and original generated UI/stickers.
 It does not relicense third-party libraries, pretrained weights, trademarks,
 or user photographs.
 
+- Mona Sans variable font: GitHub and the Mona Sans Project Authors,
+  SIL Open Font License 1.1. Source: https://github.com/github/mona-sans
+  Revision: `4bc6ba8b354c36b4fb66d32cd67b4c1f2beb0a06`.
+  Unmodified `MonaSansVF[wdth,wght,opsz,ital].woff2` is hosted locally as
+  `web/fonts/mona-sans.woff2`; license: `licenses/Mona-Sans-OFL.txt`.
+  SHA256: `fd40288d051171b51e3d01f36790604470dbb4d4fc5b36ee5a8119f4f4c6b3e1`.
+  The EGZ spark mascot and frame illustrations are original project artwork.
+  GitHub Universe is a visual reference, not an affiliation or copied logo.
+
 - MediaPipe Tasks Vision 0.10.35: Google / MediaPipe authors, Apache-2.0.
   Source: https://github.com/google-ai-edge/mediapipe
   npm: https://www.npmjs.com/package/@mediapipe/tasks-vision/v/0.10.35
@@ -28,8 +37,11 @@ Google's SDK privacy notice:
 https://developers.google.com/edge/mediapipe/solutions/tasks#mediapipe_tasks_privacy_notice
 
 The web build hosts model and runtime files on the same origin. Its production
-Content-Security-Policy disallows external connections. No application endpoint
-receives camera frames or captured images.
+Content-Security-Policy disallows external browser connections. Live video and
+landmarks stay on the device. The same-origin backend receives final captured
+PNGs only after account authentication and cloud consent, and stores them in
+private Supabase Storage. Guest/older photos additionally require the user's
+specific manual cloud-save action. See web/privacy.html.
 
 The four monkey images in `web/memes/` are optimized WebP copies of the
 user-supplied originals in `.local-assets/original-memes/`, restored for the

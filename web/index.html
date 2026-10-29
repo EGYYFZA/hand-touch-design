@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="EGZ Gesture Studio. Ubah gerakan tangan menjadi efek, lukisan, foto, dan meme. Kamera diproses di perangkat Anda.">
-  <meta name="theme-color" content="#070d19">
+  <meta name="theme-color" content="#ffffff">
   <title>EGZ — Gesture Studio</title>
-  <link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="studio-cloud.css">
 </head>
 <body data-phase="setup" data-mode="free">
   <a class="skip-link" href="#workspace">Langsung ke studio</a>
@@ -17,20 +17,18 @@
       <button class="mode" data-mode="photobooth" aria-pressed="false">Photobooth</button>
       <button class="mode" data-mode="meme" aria-pressed="false">Meme</button>
     </nav>
-    <div class="header-actions"><span id="camera-state" class="badge">KAMERA OFF</span><button id="toggle-tools" aria-expanded="true" aria-controls="tool-panel" hidden>Alat</button><button id="gallery-toggle" disabled>Hasil <span id="photo-count">0</span></button></div>
+    <div class="header-actions"><span id="camera-state" class="badge">KAMERA OFF</span><button id="gallery-toggle" disabled>Hasil <span id="photo-count">0</span></button></div>
   </header>
   <main id="workspace" tabindex="-1">
     <h1 id="mode-title" class="sr-only" tabindex="-1">EGZ Gesture Studio</h1>
     <div class="studio-grid">
       <section class="stage" aria-label="Pratinjau kamera">
+        <svg class="studio-celebration" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" fill="none" aria-hidden="true"><g stroke="var(--line)"><path d="M0 180h1440M0 720h1440M240 0v900M1200 0v900"/></g><g transform="translate(275 290) rotate(-14)"><rect x="-58" y="-58" width="116" height="116" rx="28" fill="var(--festival-mint)"/><path d="M-27 0h54M0-27v54" stroke="var(--festival-green)" stroke-width="8" stroke-linecap="round"/></g><path d="m1150 265 15 34 37 3-29 23 8 36-31-19-31 19 8-36-29-23 37-3Z" fill="var(--festival-lilac)"/><g transform="translate(1130 640) rotate(17)"><rect x="-70" y="-28" width="140" height="56" rx="28" fill="var(--festival-yellow)"/><circle cx="-22" r="6" fill="var(--festival-green)"/><circle cx="22" r="6" fill="var(--festival-green)"/></g><path d="M290 625q-45 10-34 52t55 19" stroke="var(--festival-pink)" stroke-width="20" stroke-linecap="round"/><circle cx="1110" cy="450" r="8" fill="#0fbf3e"/><circle cx="350" cy="450" r="5" fill="var(--festival-purple)"/></svg>
         <video id="video" autoplay muted playsinline hidden></video>
         <canvas id="preview" width="1280" height="720" tabindex="0" aria-label="Pratinjau kamera; pada Painting, panah menggerakkan pena atau bentuk, Spasi menggambar, Enter menempel bentuk, Shift dan panah mengubah ukuran"></canvas>
         <div id="empty-state" class="empty-state">
-          <svg class="hand-art" viewBox="0 0 300 260" fill="none" aria-hidden="true">
-            <g stroke="currentColor" stroke-width="1.5"><path d="M84 232 62 160 41 129Q34 112 46 108Q55 105 64 118L85 140 74 61Q72 45 83 43Q95 42 97 58L111 113 108 30Q108 16 119 16Q132 16 132 31L140 110 147 39Q149 25 161 28Q171 30 169 45L166 119 184 67Q190 54 200 60Q209 65 203 79L189 157 171 222Z"/><path d="m84 232 42-76 45 66M62 160l64-4 63 1M85 140l41 16 14-46M111 113l15 43 40-37M97 58l14 55M132 31l8 79M169 45l-3 74M203 79l-14 78"/><circle cx="126" cy="156" r="10"/><circle cx="140" cy="110" r="4"/><circle cx="111" cy="113" r="4"/><circle cx="166" cy="119" r="4"/><path d="M20 44V12h32M227 12h32v32M259 212v32h-32M52 244H20v-32" opacity=".5"/></g>
-            <g fill="currentColor"><circle cx="83" cy="43" r="4"/><circle cx="119" cy="16" r="4"/><circle cx="161" cy="28" r="4"/><circle cx="200" cy="60" r="4"/><circle cx="46" cy="108" r="4"/></g>
-          </svg>
-          <h2>Gesture Studio</h2><p id="camera-message">Izinkan kamera, lalu buka kedua telapak tangan.</p><button id="start-camera" class="primary">Aktifkan kamera <span aria-hidden="true">↗</span></button><p class="privacy-note">Video tetap di perangkat Anda. <a href="privacy.html" target="_blank" rel="noopener">Privasi</a></p>
+          <svg class="hand-art" viewBox="0 0 160 160" fill="none" aria-hidden="true"><path d="M80 12 98 39 130 32 128 65 150 85 121 101 118 134 87 123 61 145 47 115 15 109 29 79 15 50 47 46 58 17 80 31Z" fill="var(--festival-lime)" stroke="var(--festival-green)" stroke-width="2.5" stroke-linejoin="round"/><path d="M37 83 13 73M124 83l23-17" stroke="var(--festival-green)" stroke-width="3" stroke-linecap="round"/><ellipse cx="65" cy="74" rx="4" ry="7" fill="var(--festival-green)"/><ellipse cx="93" cy="74" rx="4" ry="7" fill="var(--festival-green)"/><path d="M65 94q14 15 28-2" stroke="var(--festival-green)" stroke-width="3" stroke-linecap="round"/><path d="m132 13 3 9 9 3-9 3-3 9-3-9-9-3 9-3Z" fill="var(--festival-purple)"/><circle cx="25" cy="131" r="7" fill="var(--festival-pink)"/></svg>
+          <h2>Gesture Studio</h2><p id="camera-message">Gerakkan tangan. Ciptakan sesuatu.</p><button id="start-camera" class="primary">Aktifkan kamera <span aria-hidden="true">↗</span></button><p class="privacy-note">Tanpa login. Video tetap di perangkat. <a href="privacy.html" target="_blank" rel="noopener">Privasi</a></p>
         </div>
         <div id="calibration" class="calibration" hidden>
           <div><span class="eyebrow" id="calibration-step">01 / KENALI TANGAN</span><h2 id="calibration-title" aria-live="polite">Buka kedua telapak tangan.</h2><p id="calibration-copy">Posisikan di depan kamera. Tahan hingga indikator penuh.</p><progress id="calibration-progress" max="1" value="0" aria-label="Progres pengenalan tangan"></progress></div>
@@ -48,14 +46,15 @@
         <div class="stage-status"><span id="tracking-state"></span><span id="effect-state"></span></div>
       </section>
       <aside class="tool-panel" id="tool-panel" aria-label="Panduan dan alat studio">
+        <div class="tools-heading"><span id="tools-title">Alat</span><button id="close-tools" type="button" aria-label="Tutup alat"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
         <div id="mode-tools" hidden>
           <div id="effects"><h2>Gerakan</h2><dl class="gesture-list"><div><dt>V <span>Dua jari</span></dt><dd>Blur kamera</dd></div><div><dt>⌞ ⌟ <span>Dua L tegak</span></dt><dd>Blur area</dd></div><div><dt>⌞ ⌝ <span>L berlawanan</span></dt><dd>Mosaik area</dd></div><div><dt>⌜ ⌝ <span>Dua L terbalik</span></dt><dd>Putar area 180°</dd></div></dl><p class="note">Rentangkan kedua tangan untuk mengatur area.</p></div>
           <div id="paint-tools" hidden><h2>Alat gambar</h2>
-            <button id="color-toggle" class="color-toggle" aria-expanded="false" aria-controls="color-picker"><span id="color-swatch"></span><span>Warna kuas <strong id="color-value">#38BDF8</strong></span><span aria-hidden="true">+</span></button>
-            <div id="color-picker" hidden><div id="color-field" tabindex="0" role="slider" aria-label="Saturasi dan kecerahan; panah kiri kanan mengubah saturasi, atas bawah kecerahan" aria-valuemin="0" aria-valuemax="100" aria-valuenow="80"><span id="color-marker"></span></div><label for="color-hue">Spektrum warna</label><input id="color-hue" type="range" min="0" max="359" value="198"><div class="color-inputs"><label for="paint-color">Warna</label><input id="paint-color" type="color" value="#38bdf8"><button id="color-done">Selesai</button></div></div>
+            <button id="color-toggle" class="color-toggle" aria-expanded="false" aria-controls="color-picker"><span id="color-swatch"></span><span>Warna kuas <strong id="color-value">#8534F3</strong></span><span aria-hidden="true">+</span></button>
+            <div id="color-picker" hidden><div id="color-field" tabindex="0" role="slider" aria-label="Saturasi dan kecerahan; panah kiri kanan mengubah saturasi, atas bawah kecerahan" aria-valuemin="0" aria-valuemax="100" aria-valuenow="80"><span id="color-marker"></span></div><label for="color-hue">Spektrum warna</label><input id="color-hue" type="range" min="0" max="359" value="265"><div class="color-inputs"><label for="paint-color">Warna</label><input id="paint-color" type="color" value="#8534f3"><button id="color-done">Selesai</button></div></div>
             <p class="tool-label">Bentuk</p><div class="shape-tools"><button data-shape="brush" aria-pressed="true">Goresan</button><button data-shape="circle" aria-pressed="false">◯ Lingkaran</button><button data-shape="square" aria-pressed="false">□ Kotak</button><button data-shape="triangle" aria-pressed="false">△ Segitiga</button></div>
-            <label for="brush-size" class="tool-label">Tebal kuas</label><input id="brush-size" type="range" min="2" max="40" value="8"><div class="tool-row"><button id="eraser" aria-pressed="false">Penghapus</button><button id="clear-paint">Bersihkan</button></div><button id="undo-paint" disabled>Urungkan</button>
-            <p class="note" id="paint-hint">Cubit untuk menggambar. Lepas untuk berhenti.</p>
+            <label for="brush-size" class="tool-label">Tebal kuas</label><input id="brush-size" type="range" min="2" max="40" value="8"><div class="tool-row"><button id="eraser" aria-pressed="false">Penghapus</button><button id="clear-paint">Bersihkan</button></div>
+            <p class="note" id="paint-hint">Cubit untuk melukis. Telapak atau genggaman ringan untuk menghapus.</p>
           </div>
           <div id="booth-tools" hidden><h2>3 foto</h2><p class="note">Kepalkan tangan ½ detik untuk mulai. Buka tangan sebelum sesi berikutnya.</p><ol class="shot-list" aria-label="Progres sesi"><li id="shot-1">01</li><li id="shot-2">02</li><li id="shot-3">03</li></ol></div>
           <div id="meme-tools" hidden><h2>Ekspresi</h2><div id="meme-result" class="meme-result"><img id="meme-image" alt="" hidden><div id="meme-wait"><span aria-hidden="true">⌁</span><p>Tirukan salah satu ekspresi.</p></div><strong id="meme-name" role="status">Menunggu ekspresi</strong></div><dl class="meme-guide"><div><dt>Clingy</dt><dd>Senyum + jari di mulut</dd></div><div><dt>Idea</dt><dd>Senyum + telunjuk ke atas</dd></div><div><dt>Shock</dt><dd>Tangan di dada + kaget</dd></div><div><dt>Tongue</dt><dd>Senyum + julurkan lidah</dd></div></dl><p class="note">Pastikan wajah dan tangan terlihat jelas.</p></div>
@@ -64,9 +63,21 @@
     </div>
     <div class="bottom-bar"><div class="actions"><button id="manual-access" class="text-button">Gunakan kontrol tombol</button><button id="capture" class="primary" disabled>Ambil foto</button><button id="retry-save" hidden>Coba simpan foto</button><button id="cancel-session" hidden>Batalkan sesi</button><button id="stop-camera" disabled>Matikan kamera</button></div></div>
     <div id="feedback" class="feedback" role="status" aria-live="polite"></div>
-    <dialog id="saved-section" class="saved-section" aria-labelledby="saved-heading"><div class="saved-heading"><h2 id="saved-heading">Hasil foto</h2><button id="gallery-close">Kembali</button></div><div id="saved-photos" class="saved-photos"></div><div class="gallery-navigation"><button id="gallery-prev" aria-label="Foto sebelumnya">&#8592;</button><span id="gallery-position" role="status"></span><button id="gallery-next" aria-label="Foto berikutnya">&#8594;</button></div><p class="gallery-note">Unduh foto sebelum menutup halaman.</p></dialog>
+    <dialog id="saved-section" class="saved-section" aria-labelledby="saved-heading"><div class="saved-heading"><h2 id="saved-heading">Hasil foto</h2><button id="gallery-close">Kembali</button></div><div id="saved-photos" class="saved-photos"></div><div class="gallery-navigation"><button id="gallery-prev" aria-label="Foto sebelumnya">&#8592;</button><span id="gallery-position" role="status"></span><button id="gallery-next" aria-label="Foto berikutnya">&#8594;</button></div><p class="gallery-note">Lokal di profil browser ini. Perangkat bersama: unduh lalu hapus foto Anda. <a href="privacy.html" target="_blank" rel="noopener">Privasi</a></p></dialog>
   </main>
+  <button id="toggle-tools" class="tools-trigger" type="button" aria-label="Alat" aria-expanded="true" aria-controls="tool-panel" title="Alat" hidden><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M4 17h16M8 4v6M16 14v6"/></svg></button>
   <div id="gesture-cursor" hidden aria-hidden="true"><svg viewBox="0 0 44 44"><circle class="cursor-track" cx="22" cy="22" r="19"/><circle id="cursor-progress" cx="22" cy="22" r="19" pathLength="100"/></svg><span></span></div>
   <div id="print-area" aria-hidden="true"></div>
+  <dialog id="studio-account" class="studio-account" aria-labelledby="studio-account-title">
+    <div class="account-heading"><h2 id="studio-account-title">Masuk untuk unduh</h2><button id="studio-account-close" type="button">Kembali</button></div>
+    <p id="studio-account-status" role="status" aria-live="polite"></p>
+    <section id="studio-signed-out">
+      <form id="studio-login-form"><label for="studio-email">Email</label><input id="studio-email" name="email" type="email" autocomplete="email" maxlength="254" required><label for="studio-password">Password</label><input id="studio-password" name="password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required><div class="button-row"><button type="submit" class="primary">Masuk</button><button id="studio-signup" type="button">Buat akun</button></div></form>
+      <p id="studio-registration-note" class="cloud-note" hidden>Pendaftaran baru belum dibuka. Akun aktif dapat masuk.</p>
+      <form id="studio-confirm-form" hidden><label for="studio-confirm-code">Kode email</label><input id="studio-confirm-code" inputmode="numeric" pattern="[0-9]{6,10}" autocomplete="one-time-code" minlength="6" maxlength="10" required><button type="submit" class="primary">Konfirmasi</button></form>
+    </section>
+    <section id="studio-signed-in" hidden><p id="studio-user-email"></p><label class="check-label"><input id="studio-consent" type="checkbox"><span>Simpan foto baru di cloud privat selama 30 hari; pengelola EGZ dapat melihat arsipnya.</span></label><p class="cloud-note">Opsional. Foto sebelumnya tetap lokal. Bukan izin publikasi atau pelatihan model. <a href="privacy.html" target="_blank" rel="noopener">Privasi</a></p><nav class="cloud-links"><button id="studio-cloud-open" type="button">Foto cloud</button><a id="studio-security-link" href="account.html" hidden>Keamanan admin</a><a id="studio-admin-link" href="admin.html" hidden>Arsip admin</a></nav><button id="studio-logout" type="button">Keluar</button></section>
+  </dialog>
+  <dialog id="studio-cloud-gallery" class="saved-section" aria-labelledby="cloud-view-heading"><div class="saved-heading"><h2 id="cloud-view-heading">Foto cloud</h2><button id="cloud-view-close" type="button">Kembali</button></div><div id="cloud-view-body" class="saved-photos"></div><div class="gallery-navigation"><button id="cloud-view-prev" type="button" aria-label="Foto cloud sebelumnya">←</button><span id="cloud-view-position" role="status"></span><button id="cloud-view-next" type="button" aria-label="Foto cloud berikutnya">→</button></div><p id="cloud-view-status" class="gallery-note" role="status" aria-live="polite"></p></dialog>
   <script type="module" src="app.js"></script>
 </body></html>

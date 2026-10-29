@@ -1,5 +1,10 @@
 ﻿# EGZ production audit
 
+**Historical report (28 October 2026).** Current guest access, gesture fixes,
+Supabase integration and release gates are documented in
+[the 29 October audit](guest-studio-audit.md). The score below applies only to
+the earlier baseline and is not the current public-release verdict.
+
 Production audit: **80/100, launchable with caveats**. The minimal fullscreen UI and automated camera flows pass; physical-camera acceptance and deployed HTTPS verification remain release checks.
 
 Reviewed on **28 October 2026 (Asia/Jakarta)**. Application baseline: `8e40159`, merged in [PR #7](https://github.com/EGYYFZA/hand-touch-design/pull/7). This report supersedes the earlier print-release audit. Scope: browser studio, build/deployment boundaries, and existing desktop CI coverage. No external audit service or remote scanner received repository contents.
