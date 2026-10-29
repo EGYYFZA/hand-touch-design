@@ -1,4 +1,4 @@
-import { cp, mkdir, copyFile, readFile, rm } from 'node:fs/promises';
+import { cp, mkdir, copyFile, readFile, writeFile, rm } from 'node:fs/promises';
 import { resolve, relative } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
@@ -29,5 +29,7 @@ for (const name of ['LICENSE', 'THIRD_PARTY.md', 'licenses/Apache-2.0.txt', 'lic
   await copyFile(resolve(root, name), resolve(output, name));
 }
 const html = await readFile(resolve(output, 'index.html'), 'utf8');
+const headers = JSON.parse(await readFile(resolve(root, 'config/security-headers.json'), 'utf8'));
+await writeFile(resolve(output, '_headers'), '/*\n' + Object.entries(headers).map(([name, value]) => `  ${name}: ${value}`).join('\n') + '\n');
 if (!html.includes('app.js') || html.includes('http://')) throw new Error('Invalid web entry point');
 console.log('Static browser app built in dist/; camera captures are excluded.');

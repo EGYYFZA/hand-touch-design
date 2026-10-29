@@ -560,6 +560,9 @@ function render(now) {
   if (!live || video.readyState < 2) return;
   if (video.currentTime !== lastVideoTime) { lastVideoTime = video.currentTime; lastFreshAt = now; }
   if (now - lastFreshAt > 1000) { stopCamera('Kamera tidak mengirim gambar baru. Aktifkan kembali kamera.'); return; }
+  // Leave time for asynchronous PNG encoding instead of redrawing the video
+  // beneath a blurred modal on every frame. Camera freshness is still checked.
+  if (saving) { resetCursor(); return; }
   if (now - lastResultAt > 350) {
     hands = []; face = null; gesturePaintActive = false; resetCursor();
     if (!pointerDown && !keyboardDrawing) { lastPaint = null; draftShape = null; }

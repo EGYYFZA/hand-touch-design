@@ -2,6 +2,10 @@
 
 Tanggal: 2026-10-29 (Asia/Jakarta). **Backend terhubung dan diuji; belum dirilis untuk pendaftaran publik.**
 
+Audit terakhir: [keamanan sebelum publikasi](security-prepublish-audit.md).
+Preview tamu/Print memakai watermark; hasil Photobooth langsung terbuka.
+Login dan MFA merotasi SID/CSRF serta mencabut sesi browser yang digantikan.
+
 ## Yang sudah berjalan
 
 - Proyek Supabase `egz-gesture-studio`, ref `chznehpvkuuooclyjhqg`, region Singapore.
@@ -26,8 +30,10 @@ tidak memperpanjangnya. RLS segera menolak foto expired; file dibersihkan job
 
 Edge Function `egz-retention` memanggil Storage API, lalu menandai metadata
 deleted. Autentikasi job memakai JWT gateway dan secret khusus job; kredensial
-cron berada di Supabase Vault, bukan SQL/source publik. Pengiriman cron sudah
-diverifikasi menghasilkan HTTP200. Sweep tombstone 24 jam menangani objek
+cron berada di Supabase Vault, bukan SQL/source publik. Pengiriman cron pada
+pemeriksaan terdahulu menghasilkan HTTP200. Verifikasi ulang penjadwal pada
+audit terakhir tidak dieksekusi karena automatic approval review gagal akibat
+batas penggunaan; uji fungsi retensi langsung tetap lulus. Sweep tombstone 24 jam menangani objek
 yang terlambat muncul setelah race upload/hapus. Ini bukan janji pemusnahan
 backup provider pada detik yang sama.
 
@@ -50,10 +56,10 @@ berjalan. Tata letak sembilan viewport tidak scroll. Font Mona Sans dimuat lokal
 frame baru mempertahankan setiap pixel dari ketiga foto sintetis yang diuji.
 Token serta sumber referensi dicatat pada [tema Universe](universe-theme.md).
 
-- 24 tes Node: kriptografi sesi, validasi PNG, CSRF origin, masa berlaku MFA, penutupan signup publik, poligon L, gesture gambar/hapus, build dan privasi berkas.
-- 40 tes browser lulus pada rangkaian penuh: akses tamu, login saat unduh, akun, cloud satu halaman, cache gagal, consent manual, PNG besar, sembilan ukuran layar, alat samping, tema terang, frame festival, poligon L, gambar/hapus, MediaPipe, download dan Print.
+- 26 tes Node: kriptografi sesi, validasi PNG, CSRF origin, masa berlaku MFA, penutupan signup publik, poligon L, gesture gambar/hapus, build dan privasi berkas.
+- 42 tes browser lulus pada rangkaian penuh: akses tamu, login saat unduh, akun, cloud satu halaman, cache gagal, consent manual, PNG besar, sembilan ukuran layar, alat samping, tema terang, frame festival, poligon L, gambar/hapus, MediaPipe, download dan Print.
 - 25 tes regresi Python lulus; aplikasi desktop tidak diubah oleh alur login web.
-- 25 pemeriksaan backend live menggunakan akun/PNG sintetis: A/B saling ditolak, SDK/Storage langsung tetap dibatasi, admin tanpa MFA ditolak, admin MFA berhasil, refresh paralel, lintas sesi/perangkat, revoke, expiry, penghapusan fisik oleh fungsi cloud, tombstone, dan replay cookie sesudah logout.
+- 28 pemeriksaan backend live menggunakan akun/PNG sintetis: A/B saling ditolak, SDK/Storage langsung tetap dibatasi, admin tanpa MFA ditolak, admin MFA berhasil, refresh paralel, lintas sesi/perangkat, revoke, expiry, penghapusan fisik oleh fungsi cloud, tombstone, dan replay cookie sesudah logout.
 - `authorization.sql` lulus pada proyek nyata; semua fixture SQL di-rollback.
 - `global-counts.sql` lulus dengan 5.000 baris metadata sintetis; seluruhnya di-rollback.
 - Akun, foto, metadata dan audit fixture live dibersihkan melalui tool yang memverifikasi identitas sintetis. Tidak mengirim email atau memakai foto pribadi untuk tes.
@@ -86,8 +92,10 @@ tidak berarti autentikator pribadi pemilik sudah disiapkan.
    disiapkan ada di `supabase/templates/confirmation.html`. Sementara itu
    `PUBLIC_SIGNUP_ENABLED=false`; pengecualian hanya alamat pengelola yang
    ditetapkan di server, tunduk pada batas email bawaan provider.
-2. **Anti-abuse Auth:** konfigurasikan CAPTCHA/rate limit provider sebelum
-   membuka signup. Limit API aplikasi tidak menggantikan proteksi endpoint
+2. **Anti-abuse Auth:** integrasikan widget CAPTCHA, penerusan captchaToken
+   melalui BFF dan CSP untuk penyedia/site key yang dipilih, lalu konfigurasikan
+   CAPTCHA/rate limit provider sebelum membuka signup. Toggle provider saja
+   belum cukup. Limit API aplikasi tidak menggantikan proteksi endpoint
    Supabase Auth yang dapat diakses langsung.
 3. **Hosting publik:** kode handler dan konfigurasi Vercel tersedia, tetapi
    deployment web baru belum dibuat. Atur environment server, APP_ORIGIN HTTPS,

@@ -17,15 +17,16 @@
     "test:backend:live": "node tools/test-backend-live.mjs",
     "db:migrate": "node tools/supabase-db.mjs migrate",
     "db:test": "node tools/supabase-db.mjs test && node tools/supabase-db.mjs test-counts",
-    "retention:check": "node tools/setup-retention.mjs check"
+    "retention:check": "node tools/setup-retention.mjs check",
+    "audit:repository": "node tools/audit-repository.mjs"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "0.10.35",
     "@supabase/supabase-js": "^2.118.0",
-    "pg": "^8.23.1",
     "sharp": "^0.35.5"
   },
   "devDependencies": {
-    "@playwright/test": "1.64.1"
+    "@playwright/test": "1.64.1",
+    "pg": "^8.23.1"
   }
 }
