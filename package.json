@@ -16,7 +16,7 @@
     "dev:demo": "npm run build && node tools/serve-web.mjs --demo --port 4174",
     "test:backend:live": "node tools/test-backend-live.mjs",
     "db:migrate": "node tools/supabase-db.mjs migrate",
-    "db:test": "node tools/supabase-db.mjs test && node tools/supabase-db.mjs test-counts",
+    "db:test": "node tools/supabase-db.mjs test && node tools/supabase-db.mjs test-counts && node tools/supabase-db.mjs test-event-trigger",
     "retention:check": "node tools/setup-retention.mjs check",
     "audit:repository": "node tools/audit-repository.mjs"
   },

@@ -1,5 +1,9 @@
 # Audit integrasi backend publik EGZ
 
+Hasil terbaru setelah deployment Netlify pada 30 Oktober 2026 tersedia pada
+[audit produksi online](netlify-production-audit.md). Catatan di bawah merupakan
+baseline sebelum deployment, bukan status hosting terkini.
+
 Tanggal: 2026-10-29 (Asia/Jakarta). Hasil: **backend akun/cloud terhubung dan
 lulus pengujian integrasi; belum siap membuka pendaftaran publik**.
 

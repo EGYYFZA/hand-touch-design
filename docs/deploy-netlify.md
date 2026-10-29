@@ -28,6 +28,12 @@ Pasang variabel melalui UI/API Netlify, konteks **production**, scope
 **Functions** bila paket akun mendukung scope. Secret tidak diletakkan dalam
 netlify.toml, Git, build output, prefix VITE/NEXT_PUBLIC, atau argumen command.
 
+Pada beta saat ini, paket akun menolak granular scope Functions dan label Secret
+pada scope bawaan. Pemilik menyetujui environment privat biasa dengan scope
+Builds/Functions/Runtime/Post-processing, hanya production. Administrator tim
+dapat membaca nilainya; preview tidak mendapat nilai itu dan build tidak
+menyalinnya ke frontend. Lihat [hasil audit online](netlify-production-audit.md).
+
 - `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`.
 - `SESSION_SECRET`: 32 byte acak base64, khusus deployment ini.
 - `CRON_SECRET`: minimal 32 karakter acak, berbeda dari SESSION_SECRET. Sinkron
@@ -70,6 +76,11 @@ dari allowlist, status, dan request ID yang tervalidasi. Jangan menambah body,
 password, token, cookie, email atau error provider mentah ke log. Tinjau lonjakan
 401/403/429/503 pada log Netlify, audit Auth Supabase, dan audit arsip admin.
 Alert otomatis atau on-call eksternal belum dikonfigurasi.
+
+Untuk CLI resmi yang sudah login dan ditautkan ke site yang benar, gunakan
+`netlify logs --source functions --function studio --since 1h --json`.
+Simpan log mentah hanya pada direktori lokal yang diabaikan Git; jangan unggah
+output operasional ke repository.
 
 Retensi cloud tetap berjalan di Supabase setiap lima menit, bukan pada laptop
 atau jadwal Netlify. Pantau kegagalan dan backlog serta jalankan

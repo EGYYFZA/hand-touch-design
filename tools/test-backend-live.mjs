@@ -1,14 +1,12 @@
 // Uses only synthetic accounts/images. Always removes its own fixtures.
 import assert from 'node:assert/strict';
 import { randomUUID, randomBytes, createHmac } from 'node:crypto';
-import { createServer } from 'node:http';
 import sharp from 'sharp';
 import { chromium } from '@playwright/test';
 import { configuration, serviceClient, publicClient } from '../server/config.mjs';
-import { createStudioHandler } from '../server/backend.mjs';
 import { hash, decrypt, encrypt } from '../server/security.mjs';
 
-process.loadEnvFile(new URL('../.env.local', import.meta.url));
+process.loadEnvFile(process.env.EGZ_TEST_ENV_FILE || new URL('../.env.local', import.meta.url));
 const cfg = configuration(), service = serviceClient(cfg), accounts = [], photoPaths = [], checks = [];
 const check = (name, result) => { assert.ok(result, name); checks.push(name); };
 class Visitor {
@@ -17,7 +15,7 @@ class Visitor {
     const headers = { Cookie: [...this.jar].map(([k, v]) => `${k}=${v}`).join('; '), ...extra.headers };
     if (body !== undefined) { headers.Origin = cfg.origin; headers['X-CSRF-Token'] = this.csrf || ''; headers['Content-Type'] ||= Buffer.isBuffer(body) ? 'image/png' : 'application/json'; }
     const response = await fetch(`${cfg.origin}/api/studio?action=${action}`, { method: body === undefined ? 'GET' : 'POST',
-      headers, body: body === undefined ? undefined : Buffer.isBuffer(body) ? body : JSON.stringify(body) });
+      headers, body: body === undefined ? undefined : Buffer.isBuffer(body) ? body : JSON.stringify(body), signal: AbortSignal.timeout(30000) });
     for (const cookie of response.headers.getSetCookie()) { const part = cookie.split(';')[0], at = part.indexOf('='); this.jar.set(part.slice(0, at), part.slice(at + 1)); }
     const data = response.headers.get('content-type')?.includes('application/json') ? await response.json() : Buffer.from(await response.arrayBuffer());
     if (data.csrfToken) this.csrf = data.csrfToken;
@@ -52,11 +50,17 @@ try {
   check('user metadata role cannot grant admin', (await B.request('admin-photos')).status === 403);
   const badOrigin = await fetch(`${cfg.origin}/api/studio?action=login`, { method: 'POST', headers: { Origin: 'https://evil.example', 'Content-Type': 'application/json' }, body: '{}' });
   check('cross-site mutation denied', badOrigin.status === 403);
+  const validCsrf = A.csrf; A.csrf = 'invalid-csrf';
+  check('mutation with mismatched CSRF is denied', (await A.request('consent', { granted: true, version: '2026-10-29' })).status === 403);
+  A.csrf = validCsrf;
   const nullJson = await fetch(`${cfg.origin}/api/studio?action=login`, { method: 'POST', headers: { Origin: cfg.origin, Cookie: [...A.jar].map(([k,v])=>`${k}=${v}`).join('; '), 'X-CSRF-Token': A.csrf, 'Content-Type': 'application/json' }, body: 'null' });
   check('null JSON rejected as400', nullJson.status === 400);
   const image = await sharp({ create: { width: 64, height: 48, channels: 3, background: '#387bf8' } }).png().toBuffer();
   const idA = randomUUID(), idB = randomUUID();
   const uploadHeaders = id => ({ headers: { 'X-Photo-Id': id, 'X-Photo-Mode': 'free' } });
+  check('upload rejects a non-PNG MIME type', (await A.request('upload', image, { headers: { ...uploadHeaders(randomUUID()).headers, 'Content-Type': 'image/jpeg' } })).status === 400);
+  check('upload rejects PNG MIME with invalid image bytes', (await A.request('upload', Buffer.from('<svg>synthetic</svg>'), uploadHeaders(randomUUID()))).status === 400);
+  check('upload enforces the 3 MiB server byte limit', (await A.request('upload', Buffer.alloc(3 * 1024 * 1024 + 1), uploadHeaders(randomUUID()))).status === 413);
   check('no upload before consent', (await A.request('upload', image, uploadHeaders(idA))).status === 403);
   assert.equal((await A.request('consent', { granted: true, version: '2026-10-29' })).status, 200);
   assert.equal((await B.request('consent', { granted: true, version: '2026-10-29' })).status, 200);

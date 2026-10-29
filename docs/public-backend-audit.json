@@ -1,9 +1,9 @@
 {
   "schema_version": "ecc.agent-architecture-audit.report.v1",
-  "audit_date": "2026-10-29",
+  "audit_date": "2026-10-30",
   "executive_verdict": {
-    "overall_health": "backend_integrated_public_registration_closed",
-    "primary_failure_mode": "Production email delivery, provider abuse protection and HTTPS hosting remain unconfigured. The local connected backend and cloud lifecycle passed integration checks.",
+    "overall_health": "public_guest_beta_deployed_email_registration_closed",
+    "primary_failure_mode": "The Netlify guest beta passed online security checks; public email delivery, CAPTCHA integration and physical-device acceptance remain outstanding.",
     "most_urgent_fix": "Verify the Resend sender domain, configure SMTP and Auth abuse controls, and deploy/test the HTTPS BFF before enabling public signup."
   },
   "scope": {
@@ -26,7 +26,7 @@
       "answer_shaping",
       "hidden_llm_repair_loops"
     ],
-    "limitation": "Landmark models are not LLM agents. Synthetic photos/accounts and Chromium were tested. Physical devices, production deployment, real email delivery and provider backup destruction were not verified."
+    "limitation": "Synthetic accounts/photos, Chromium and Netlify guest beta were tested. Real email delivery, physical devices and provider backup destruction were not verified."
   },
   "findings": [
     {
@@ -47,18 +47,18 @@
     },
     {
       "severity": "medium",
-      "status": "open_release_prerequisite",
-      "title": "Production web deployment is outstanding",
-      "mechanism": "The web BFF is local; production server environment, HTTPS origin and Auth URLs have not been deployed and tested.",
+      "status": "fixed_and_online_verified",
+      "title": "Netlify guest beta deployed and tested",
+      "mechanism": "HTTPS, configured same-origin BFF, scoped production values, private cloud and existing-account login passed online checks. Public email signup remains closed.",
       "source_layer": "platform_rendering",
       "root_cause": "Hosting configuration is outstanding.",
       "evidence_refs": [
-        "api/studio.js",
-        "vercel.json",
-        "docs/deploy-vercel.md"
+        "netlify.toml",
+        "server/web-handler.mjs",
+        "docs/netlify-production-audit.md"
       ],
       "confidence": 1,
-      "recommended_fix": "Deploy with server-only secrets, exact HTTPS origin/Auth URLs, separate preview credentials and production smoke checks."
+      "recommended_fix": "Complete SMTP/CAPTCHA and physical-device acceptance before opening public signup."
     },
     {
       "severity": "high",
@@ -155,7 +155,7 @@
   ],
   "verification": {
     "node_tests": {
-      "passed": 26,
+      "passed": 31,
       "failed": 0
     },
     "browser_tests": {
@@ -169,16 +169,18 @@
     },
     "guest_flow": "public_local_studio; inline_login_for_png_download; explicit_guest_claim; consent_and_manual_photo_action_for_old_uploads",
     "live_backend_checks": {
-      "passed": 28,
+      "passed": 32,
       "failed": 0,
-      "fixtures": "synthetic_and_cleaned"
+      "fixtures": "synthetic_and_cleaned",
+      "target": "Netlify production guest beta"
     },
     "sql_authorization": "passed_live_rollback",
     "sql_global_counts": "passed_live_5000_metadata_rows_rollback",
     "applied_migrations": [
       "202610290001",
       "202610290002",
-      "202610290003"
+      "202610290003",
+      "202610300004"
     ],
     "retention": {
       "schedule": "*/5 * * * *",
@@ -186,13 +188,32 @@
       "cron_delivery_status": 200,
       "anonymous_denied": true,
       "physical_synthetic_object_removal": "passed_this_run",
-      "scheduler_evidence_scope": "previous_audit_not_reverified_this_run",
-      "scheduler_recheck": "not_executed_automatic_approval_review_usage_limit"
+      "scheduler_evidence_scope": "reverified_2026_10_30",
+      "scheduler_recheck": "passed"
     },
     "runtime_npm_advisories_reported": 0,
     "production_release_ready": false,
     "public_build_server_secret_matches": 0,
-    "security_followup_report": "docs/security-prepublish-audit.md"
+    "security_followup_report": "docs/security-prepublish-audit.md",
+    "public_http_checks": {
+      "passed": 24,
+      "failed": 0
+    },
+    "deployed_browser_checks": {
+      "passed": 12,
+      "failed": 0
+    },
+    "online_public_text_assets_checked": 29,
+    "online_public_server_secret_matches": 0,
+    "beta_release_ready": true,
+    "production_audit_report": "docs/netlify-production-audit.md",
+    "sql_event_trigger_permissions": "passed_live_rollback",
+    "netlify_denial_log_events_verified": 16,
+    "security_advisor": {
+      "errors": 0,
+      "warnings": 2,
+      "warning_reason": "authenticated_only_RLS_helpers_intentional"
+    }
   },
   "ordered_fix_plan": [
     {

@@ -6,12 +6,14 @@ import { resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '..');
 const git = args => execFileSync('git', args, { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
 const knownSecrets = [];
-try {
-  const env = await readFile(resolve(root, '.env.local'), 'utf8');
+for (const envPath of ['.env.local', 'secrets/netlify-production.env']) try {
+  const env = await readFile(resolve(root, envPath), 'utf8');
   for (const line of env.split(/\r?\n/)) {
     const match = /^(SUPABASE_SECRET_KEY|SESSION_SECRET|CRON_SECRET)\s*=\s*(.+)$/.exec(line);
     if (match) { const value = match[2].trim().replace(/^["']|["']$/g, ''); if (value.length >= 24) knownSecrets.push(value); }
   }
+} catch { /* CI has no local credentials; provider-signature checks still run. */ }
+try {
   const setup = JSON.parse(await readFile(resolve(root, 'secrets/supabase-project-setup.json'), 'utf8'));
   if (setup.database_password?.length >= 16) knownSecrets.push(setup.database_password);
 } catch { /* CI has no local credentials; provider-signature checks still run. */ }

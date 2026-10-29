@@ -1,5 +1,10 @@
 # Status integrasi backend EGZ
 
+Pembaruan 30 Oktober 2026: beta publik sudah berjalan di
+https://egz-gesture-studio.netlify.app dengan login akun yang sudah ada.
+Lihat [audit produksi online](netlify-production-audit.md) untuk bukti terbaru;
+catatan di bawah menjelaskan tahapan integrasi sebelumnya.
+
 Tanggal: 2026-10-29 (Asia/Jakarta). **Backend terhubung dan diuji; belum dirilis untuk pendaftaran publik.**
 
 Audit terakhir: [keamanan sebelum publikasi](security-prepublish-audit.md).

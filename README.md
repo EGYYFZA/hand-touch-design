@@ -330,3 +330,6 @@ Camera captures and virtual environments stay local and are ignored by Git. Use 
 Untuk hosting beta dengan backend, ikuti [panduan Netlify](docs/deploy-netlify.md).
 Publish hanya `dist`; fungsi `/api/studio` diperlukan untuk akun dan cloud.
 Signup publik tetap ditutup sampai pengiriman email serta proteksi Auth siap.
+
+Beta: [egz-gesture-studio.netlify.app](https://egz-gesture-studio.netlify.app).
+Lihat [laporan keamanan setelah deployment](docs/netlify-production-audit.md).
