@@ -30,8 +30,8 @@ try {
       } catch (error) { await client.query('rollback'); throw error; }
     }
     await client.query("select pg_advisory_unlock(hashtextextended('egz-migrations',0))");
-  } else if (action === 'test' || action === 'test-counts') {
-    const file = action === 'test' ? 'authorization.sql' : 'global-counts.sql';
+  } else if (['test', 'test-counts', 'test-event-trigger'].includes(action)) {
+    const file = action === 'test' ? 'authorization.sql' : action === 'test-counts' ? 'global-counts.sql' : 'event-trigger-permissions.sql';
     await client.query(await readFile(resolve(root, 'supabase/tests', file), 'utf8'));
     console.log(`Database ${file} passed; all fixtures rolled back.`);
   } else if (action === 'status') {

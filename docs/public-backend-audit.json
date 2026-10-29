@@ -179,7 +179,8 @@
     "applied_migrations": [
       "202610290001",
       "202610290002",
-      "202610290003"
+      "202610290003",
+      "202610300004"
     ],
     "retention": {
       "schedule": "*/5 * * * *",
@@ -205,7 +206,14 @@
     "online_public_text_assets_checked": 29,
     "online_public_server_secret_matches": 0,
     "beta_release_ready": true,
-    "production_audit_report": "docs/netlify-production-audit.md"
+    "production_audit_report": "docs/netlify-production-audit.md",
+    "sql_event_trigger_permissions": "passed_live_rollback",
+    "netlify_denial_log_events_verified": 16,
+    "security_advisor": {
+      "errors": 0,
+      "warnings": 2,
+      "warning_reason": "authenticated_only_RLS_helpers_intentional"
+    }
   },
   "ordered_fix_plan": [
     {

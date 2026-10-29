@@ -77,6 +77,11 @@ password, token, cookie, email atau error provider mentah ke log. Tinjau lonjaka
 401/403/429/503 pada log Netlify, audit Auth Supabase, dan audit arsip admin.
 Alert otomatis atau on-call eksternal belum dikonfigurasi.
 
+Untuk CLI resmi yang sudah login dan ditautkan ke site yang benar, gunakan
+`netlify logs --source functions --function studio --since 1h --json`.
+Simpan log mentah hanya pada direktori lokal yang diabaikan Git; jangan unggah
+output operasional ke repository.
+
 Retensi cloud tetap berjalan di Supabase setiap lima menit, bukan pada laptop
 atau jadwal Netlify. Pantau kegagalan dan backlog serta jalankan
 `npm run retention:check` saat melakukan verifikasi operasional.

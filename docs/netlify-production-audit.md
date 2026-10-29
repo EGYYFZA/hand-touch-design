@@ -46,6 +46,7 @@ Deploy dengan environment yang diuji: `6ae37d530c0a4de02f23fa4f`.
 | Dependensi | Audit npm produksi: **0 advisory**. pg masih dipakai tool operator dan dipindah ke devDependencies. Sharp, Supabase SDK dan MediaPipe tetap diperlukan. Tidak ada source/secret dikirim ke layanan scanner eksternal. |
 | Berkas terpapar | Build allowlist publik; URL .env, secrets, .git, .netlify, server, core, captures ditolak. **29 aset teks online diperiksa: 0 nilai secret server ditemukan**. |
 | Git / secret | Scan signature dan nilai secret lokal/produksi pada working tree serta objek teks <=2 MiB dari refs tersedia: **0 temuan**. Metadata 12 kepala PR tidak memuat path privat. GitHub melaporkan 0 alert secret scanning/Dependabot. Binary, teks besar, refs tak terjangkau, fork/clone/cache tidak dinyatakan bersih oleh metode ini. |
+| Security Advisor | Izin EXECUTE public/anon/authenticated pada event trigger rls_auto_enable dicabut melalui migration 004. Tabel baru tetap otomatis ber-RLS. Advisor kini **0 error dan 2 warning** untuk helper caller-scoped yang diperlukan RLS; helper itu tetap authenticated-only dengan search_path tetap dan pemeriksaan AAL2/membership. |
 | Rotasi key | Tidak ditemukan key yang terbukti bocor pada cakupan scan; service/job key tidak dicabut secara spekulatif. SESSION_SECRET produksi baru memisahkan sesi lokal. Kebocoran di masa depan wajib diikuti rotasi seluruh pemakai, termasuk Vault/Edge Function. |
 | Inspect / preview | Preview/Print tamu ber-watermark maksimal 960 piksel pada sisi terpanjang; login memulihkan hasil asli. Original tetap lokal, sehingga pemilik browser masih bisa mengambilnya melalui DevTools/IndexedDB/kamera/screenshot. Bukan DRM. |
 
@@ -62,7 +63,9 @@ Deploy dengan environment yang diuji: `6ae37d530c0a4de02f23fa4f`.
 - **12 pemeriksaan browser online lulus** dengan kamera sintetis: MediaPipe
   nyata, Photobooth otomatis, watermark/Print, login saat unduh, semua mode,
   tiga viewport, tanpa upload tamu/koneksi eksternal/error halaman.
-- Dua suite SQL otorisasi/kuota lulus; semua fixture di-rollback.
+- Tiga suite SQL otorisasi/kuota/izin event trigger lulus; semua fixture di-rollback.
+- Log Netlify menangkap **16 event penolakan** dari tes (400/401/403/413),
+  tanpa field tambahan yang memuat informasi sensitif.
 - Retensi diperiksa ulang: fungsi berhasil, anonim ditolak, cron aktif setiap
   lima menit dan pengiriman HTTP200.
 - Tiga akun dan PNG sintetis tes dibersihkan; daftar cleanup kosong. Tidak
