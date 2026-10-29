@@ -16,13 +16,19 @@
     "bucket": "photo-archive",
     "public": false,
     "file_size_limit_dashboard": "3 MB",
-    "allowed_mime_types": ["image/png"],
+    "allowed_mime_types": [
+      "image/png"
+    ],
     "application_policies_applied": true
   },
   "application_integration_active": true,
   "guest_studio_enabled": true,
-  "login_required_for": ["png_download", "cloud_gallery", "cloud_upload"],
-  "application_hosting": "local-connected; Vercel handler prepared",
+  "login_required_for": [
+    "png_download",
+    "cloud_gallery",
+    "cloud_upload"
+  ],
+  "application_hosting": "Netlify guest beta",
   "public_registration_enabled": false,
   "public_release_ready": false,
   "smtp_provider_selected": "Resend",
@@ -30,5 +36,11 @@
   "cloud_retention_days_required": 30,
   "cloud_retention_job_active": true,
   "cloud_retention_schedule": "*/5 * * * *",
-  "cloud_retention_function": "egz-retention"
+  "cloud_retention_function": "egz-retention",
+  "application_origin": "https://egz-gesture-studio.netlify.app",
+  "beta_release_ready": true,
+  "auth_provider_public_signup_enabled": false,
+  "minimum_password_length": 12,
+  "email_otp_expiry_seconds": 600,
+  "secure_password_change": true
 }

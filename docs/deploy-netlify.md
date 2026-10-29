@@ -28,6 +28,12 @@ Pasang variabel melalui UI/API Netlify, konteks **production**, scope
 **Functions** bila paket akun mendukung scope. Secret tidak diletakkan dalam
 netlify.toml, Git, build output, prefix VITE/NEXT_PUBLIC, atau argumen command.
 
+Pada beta saat ini, paket akun menolak granular scope Functions dan label Secret
+pada scope bawaan. Pemilik menyetujui environment privat biasa dengan scope
+Builds/Functions/Runtime/Post-processing, hanya production. Administrator tim
+dapat membaca nilainya; preview tidak mendapat nilai itu dan build tidak
+menyalinnya ke frontend. Lihat [hasil audit online](netlify-production-audit.md).
+
 - `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`.
 - `SESSION_SECRET`: 32 byte acak base64, khusus deployment ini.
 - `CRON_SECRET`: minimal 32 karakter acak, berbeda dari SESSION_SECRET. Sinkron

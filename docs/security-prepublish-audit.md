@@ -1,5 +1,8 @@
 # Audit keamanan sebelum publikasi EGZ
 
+Audit ini mencatat kondisi sebelum deployment. Verifikasi setelah online pada
+30 Oktober 2026 tersedia pada [audit Netlify](netlify-production-audit.md).
+
 Tanggal: 29 Oktober 2026, Asia/Jakarta. Status: perbaikan lokal dan pengujian
 backend selesai; **pendaftaran publik dan deployment produksi belum siap**.
 Laporan ini tidak menyatakan aplikasi bebas semua bug atau kerentanan.

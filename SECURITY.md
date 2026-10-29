@@ -6,6 +6,10 @@ If you find a vulnerability, use this repository's **Security > Report a vulnera
 
 A clean scan is not a guarantee of security. Rotate any exposed secret at its provider; removing it from the latest commit does not remove Git history.
 
+The Netlify guest beta and its accepted environment-scope limitations are
+documented in [the online production audit](docs/netlify-production-audit.md).
+Public email signup/recovery remains closed pending SMTP and abuse protection.
+
 The account service uses a same-origin BFF, verified Supabase users, opaque
 HttpOnly cookies, encrypted server-side token storage, CSRF/Origin checks,
 owner-scoped metadata/Storage RLS and MFA admin membership. Browser camera
