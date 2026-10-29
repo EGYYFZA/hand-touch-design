@@ -42,11 +42,12 @@ test('camera capture, download and Print use the selected saved image', async ({
   await expect(card.getByRole('button', { name: 'Print', exact: true })).toBeEnabled();
 });
 
-test('real MediaPipe worker initializes from same-origin files', async ({ page }) => {
+test('real MediaPipe worker initializes from same-origin files', async ({ page, baseURL }) => {
   const failures = [];
   const external = [];
   page.on('pageerror', error => failures.push(error.message));
-  page.on('request', request => { if (!request.url().startsWith('http://127.0.0.1:4173') && !request.url().startsWith('blob:')) external.push(request.url()); });
+  const origin = new URL(baseURL).origin;
+  page.on('request', request => { if (!request.url().startsWith(origin) && !request.url().startsWith('blob:')) external.push(request.url()); });
   await camera(page);
   await expect(page.locator('#tracking-state')).not.toContainText('Menyiapkan', { timeout: 45000 });
   await expect(page.locator('#tracking-state')).not.toContainText('belum tersedia');
@@ -70,7 +71,7 @@ test('photobooth captures exactly three frames into a printable strip', async ({
   await page.getByRole('button', { name: 'Mulai sesi' }).click();
   await expect(page.locator('#countdown')).toBeVisible();
   await expect(page.locator('.photo-card')).toHaveCount(1, { timeout: 20000 });
-  await page.locator('#gallery-toggle').click();
+  await expect(page.locator('#saved-section')).toBeVisible();
   const dimensions = await page.locator('.photo-card img').evaluate(img => ({ w: img.naturalWidth, h: img.naturalHeight }));
   expect(dimensions.h).toBeGreaterThan(dimensions.w);
   await expect(page.locator('#countdown')).toBeHidden();
@@ -93,8 +94,12 @@ test('mobile workspace fits and preserves keyboard/native controls', async ({ pa
 test('build serves security headers and does not publish private workspace files', async ({ request }) => {
   const response = await request.get('/');
   expect(response.headers()['content-security-policy']).toContain("connect-src 'self'");
+  expect(response.headers()['content-security-policy']).toContain("form-action 'self'");
+  expect(response.headers()['content-security-policy']).toContain("frame-src 'none'");
+  expect(response.headers()['x-frame-options']).toBe('DENY');
+  expect(response.headers()['cross-origin-resource-policy']).toBe('same-origin');
   expect(response.headers()['permissions-policy']).toContain('microphone=()');
-  for (const path of ['/captures/example.png', '/.env', '/.git/config', '/.venv/pyvenv.cfg', '/core/pipeline.py']) {
+  for (const path of ['/captures/example.png', '/.env', '/.env.local', '/secrets/supabase-project-setup.json', '/.git/config', '/.venv/pyvenv.cfg', '/server/config.mjs', '/core/pipeline.py']) {
     expect((await request.get(path)).status()).toBe(404);
   }
 });

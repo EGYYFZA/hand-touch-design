@@ -1,5 +1,7 @@
 ﻿import { test, expect } from '@playwright/test';
 
+import { fakeVision } from './fixtures.mjs';
+
 async function manual(page) {
   await page.goto('/'); await page.locator('#manual-access').click();
   await expect(page.locator('#menu-screen')).toBeVisible();
@@ -14,7 +16,7 @@ test('responsive layouts, readable contrast, labels, keyboard color and shape co
   const menu = await page.locator('#menu-screen').boundingBox();
   expect(Math.abs(menu.x + menu.width / 2 - 720)).toBeLessThan(1);
   expect(Math.abs(menu.y + menu.height / 2 - 500)).toBeLessThan(1);
-  for (const [width,height] of [[375,667],[390,844],[768,900],[1024,768],[1366,768],[1440,900],[844,390]]) {
+  for (const [width,height] of [[320,568],[568,320],[375,667],[390,844],[768,900],[1024,768],[1366,768],[1440,900],[844,390]]) {
     await page.setViewportSize({width,height});
     for (const mode of ['free','painting','photobooth','meme']) {
       await page.locator(`#mode-nav [data-mode=${mode}]`).click();
@@ -29,6 +31,7 @@ test('responsive layouts, readable contrast, labels, keyboard color and shape co
       const actions = await page.locator('.actions').boundingBox();
       expect(tools.y,`${width}x${height}/${mode}: header overlap`).toBeGreaterThanOrEqual(header.y + header.height);
       expect(tools.y + tools.height,`${width}x${height}/${mode}: action overlap`).toBeLessThanOrEqual(actions.y);
+      expect(await page.locator('#tool-panel').evaluate(panel => panel.scrollHeight <= panel.clientHeight), `${width}x${height}/${mode}: tool overflow`).toBe(true);
       const camera=await page.locator('#preview').boundingBox(); expect(camera.width).toBe(width);expect(camera.height).toBe(height);
     }
   }
@@ -42,7 +45,7 @@ test('responsive layouts, readable contrast, labels, keyboard color and shape co
   await page.locator('[data-shape=triangle]').click(); await page.locator('#preview').focus();
   await page.keyboard.press('ArrowRight'); await page.keyboard.press('Shift+ArrowDown'); await page.keyboard.press('Enter');
   await expect(page.locator('#feedback')).toHaveText('Bentuk ditempel.');
-  await expect(page.locator('#undo-paint')).toBeEnabled();
+  await expect(page.locator('#undo-paint')).toHaveCount(0);
   const issues=await page.evaluate(()=>{
     const bad=[];
     const ids=[...document.querySelectorAll('[id]')].map(e=>e.id);
@@ -50,7 +53,8 @@ test('responsive layouts, readable contrast, labels, keyboard color and shape co
     for(const input of document.querySelectorAll('input')) if(!input.labels?.length) bad.push(`label:${input.id}`);
     for(const button of document.querySelectorAll('button')) if(!button.textContent.trim() && !button.getAttribute('aria-label')) bad.push('button name');
     const luminance=hex=>{const c=hex.match(/\w\w/g).map(v=>parseInt(v,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);return c[0]*.2126+c[1]*.7152+c[2]*.0722;};
-    for(const [fg,bg] of [['#ecf4ff','#070d19'],['#9bafc8','#0b1424'],['#38bdf8','#0b1424'],['#031322','#38bdf8']]){
+    const tokens = getComputedStyle(document.documentElement), token = key => tokens.getPropertyValue(key).trim();
+    for(const [fg,bg] of [[token('--ink'),token('--bg')],[token('--muted'),token('--panel')],[token('--accent'),token('--panel')],[token('--ink'),token('--festival-lime')]]){
       const a=luminance(fg),b=luminance(bg);if((Math.max(a,b)+.05)/(Math.min(a,b)+.05)<4.5)bad.push(`contrast:${fg}/${bg}`);
     }
     return bad;
@@ -61,6 +65,39 @@ test('responsive layouts, readable contrast, labels, keyboard color and shape co
   await expect(page.locator('#shot-feedback')).toBeVisible({timeout:5000});
   expect(await page.locator('#shutter').evaluate(e=>getComputedStyle(e).display)).toBe('none');
   await page.locator('#cancel-session').click();
+});
+
+test('side tools close with X, preview on hover, pin on click and stay closed when changing mode', async ({ page }) => {
+  await fakeVision(page); await manual(page); await page.locator('#mode-nav [data-mode=painting]').click();
+  await expect(page.locator('#undo-paint')).toHaveCount(0);
+  await page.locator('[data-shape=circle]').click(); await expect(page.locator('[data-shape=circle]')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('[data-shape=circle]').click(); await expect(page.locator('[data-shape=brush]')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#close-tools').click(); await expect(page.locator('#tool-panel')).toBeHidden();
+  await expect(page.locator('#toggle-tools')).toHaveAttribute('aria-expanded', 'false');
+  expect(await page.locator('#toggle-tools').evaluate(button => !!button.closest('.topbar'))).toBe(false);
+  await page.locator('#mode-nav [data-mode=meme]').click(); await expect(page.locator('#tool-panel')).toBeHidden();
+  await page.locator('#toggle-tools').hover(); await expect(page.locator('#tool-panel')).toBeVisible();
+  await page.mouse.move(100, 450); await expect(page.locator('#tool-panel')).toBeHidden();
+  await page.locator('#toggle-tools').click(); await expect(page.locator('#tool-panel')).toBeVisible();
+  await page.mouse.move(100, 450); await expect(page.locator('body')).toHaveAttribute('data-tools-pinned', 'true');
+  await expect(page.locator('#tool-panel')).toBeVisible();
+  await page.locator('#close-tools').click(); await expect(page.locator('#toggle-tools')).toBeFocused();
+  await page.locator('#toggle-tools').press('Enter'); await expect(page.locator('#close-tools')).toBeFocused();
+  await page.keyboard.press('Escape'); await expect(page.locator('#tool-panel')).toBeHidden();
+});
+
+test('touch can close and reopen the side tools without hover or losing the selected mode', async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ viewport: { width: 320, height: 568 }, hasTouch: true, isMobile: true, permissions: ['camera'] });
+  try {
+    const page = await context.newPage(); await fakeVision(page); await page.goto(baseURL);
+    await page.locator('#manual-access').tap(); await page.locator('#mode-nav [data-mode=painting]').tap();
+    await page.locator('#close-tools').tap(); await expect(page.locator('#tool-panel')).toBeHidden();
+    await page.locator('#toggle-tools').tap(); await expect(page.locator('#tool-panel')).toBeVisible();
+    await expect(page.locator('body')).toHaveAttribute('data-mode', 'painting');
+    await page.locator('#close-tools').tap(); await page.locator('#mode-nav [data-mode=meme]').tap();
+    await expect(page.locator('#tool-panel')).toBeHidden(); await expect(page.locator('body')).toHaveAttribute('data-mode', 'meme');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+  } finally { await context.close(); }
 });
 
 test('real face model loads only on entering Meme and worker produces a result', async ({ page }) => {
@@ -101,7 +138,7 @@ test('failed PNG export retains the full three-shot strip and can retry after ca
   await expect(page.locator('.photo-card')).toHaveCount(0); await expect(page.locator('#capture')).toBeDisabled();
   await page.locator('#stop-camera').click(); await page.locator('#retry-save').click();
   await expect(page.locator('.photo-card')).toHaveCount(1); await expect(page.locator('#retry-save')).toBeHidden();
-  await page.locator('#gallery-toggle').click();
+  await expect(page.locator('#saved-section')).toBeVisible();
   const matches=await page.locator('.photo-card img').evaluate(async image=>{
     await image.decode();const canvas=document.createElement('canvas');canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;
     canvas.getContext('2d').drawImage(image,0,0);return canvas.toDataURL()===window.failedPicture;

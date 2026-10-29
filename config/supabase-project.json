@@ -1,0 +1,34 @@
+{
+  "project_name": "egz-gesture-studio",
+  "project_ref": "chznehpvkuuooclyjhqg",
+  "organization_id": "kdrfgmncxfepllfadygp",
+  "project_url": "https://chznehpvkuuooclyjhqg.supabase.co",
+  "dashboard_url": "https://supabase.com/dashboard/project/chznehpvkuuooclyjhqg",
+  "region": "ap-southeast-1",
+  "plan_at_creation": "Free",
+  "provisioned_on": "2026-10-29",
+  "creation_settings": {
+    "enable_data_api": true,
+    "automatically_expose_new_tables": false,
+    "enable_automatic_rls": true
+  },
+  "storage": {
+    "bucket": "photo-archive",
+    "public": false,
+    "file_size_limit_dashboard": "3 MB",
+    "allowed_mime_types": ["image/png"],
+    "application_policies_applied": true
+  },
+  "application_integration_active": true,
+  "guest_studio_enabled": true,
+  "login_required_for": ["png_download", "cloud_gallery", "cloud_upload"],
+  "application_hosting": "local-connected; Vercel handler prepared",
+  "public_registration_enabled": false,
+  "public_release_ready": false,
+  "smtp_provider_selected": "Resend",
+  "smtp_domain_verified": false,
+  "cloud_retention_days_required": 30,
+  "cloud_retention_job_active": true,
+  "cloud_retention_schedule": "*/5 * * * *",
+  "cloud_retention_function": "egz-retention"
+}

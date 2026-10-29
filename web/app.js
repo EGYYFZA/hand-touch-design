@@ -1,21 +1,33 @@
-import { describeHand, automaticEffect, canvasPoint, MemeLatch, distance, clamp, DwellSelector, screenPoint, shapeBounds, hsvToHex, expressionScores, smoothPoint } from './gestures.js';
+import { describeHand, automaticEffect, canvasPoint, MemeLatch, distance, clamp, DwellSelector, screenPoint, shapeBounds, hsvToHex, expressionScores, smoothPoint, paintAction } from './gestures.js';
+import { listPhotos, storePhoto, deletePhoto, MAX_PHOTOS } from './photo-store.js';
+import { deviceProfile } from './device-profile.js';
+import { createPhotoStrip } from './photo-strip.js';
+import { createGuestPreview } from './photo-preview.js';
+import { initializeCloud, canUseStudio, cloudIdentity, sameCloudIdentity, preparePhotoCloud, captureConsent, authorizePhotoExport, needsGuestPreview } from './studio-cloud.js';
 
 const $ = id => document.getElementById(id);
 const video = $('video'), preview = $('preview'), ctx = preview.getContext('2d');
 const raw = document.createElement('canvas'), rawCtx = raw.getContext('2d');
 const paint = document.createElement('canvas'), paintCtx = paint.getContext('2d');
 const small = document.createElement('canvas'), smallCtx = small.getContext('2d');
+const visualStyle = getComputedStyle(document.documentElement);
+const visualColors = { paper: visualStyle.getPropertyValue('--festival-white').trim(), green: visualStyle.getPropertyValue('--festival-green').trim() };
 const titles = { free: 'Efek Tangan', painting: 'Painting', photobooth: 'Photobooth', meme: 'Meme' };
 let mode = 'free', erasing = false, lastPaint = null, pointerDown = false;
 let stream = null, live = false, starting = false, generation = 0;
 let worker = null, visionReady = false, visionBusy = false, hands = [], face = null, shapes = {};
 let lastVideoTime = -1, lastFreshAt = 0, lastInferenceAt = 0, lastResultAt = 0;
-let session = null, fistSince = null, fistArmed = true, photos = [], photoNumber = 0;
+let session = null, fistSince = null, fistArmed = true, photos = [];
+let galleryLoading = true, pendingGalleryPreview = false;
+let profile = deviceProfile();
+let accountReady = null;
 let latch = new MemeLatch(), renderMeme = null, printing = false;
 let phase = 'setup', calibrationStep = 'palms', manual = false;
 let dwell = new DwellSelector(), calibrationHold = new DwellSelector(), cursorPoint = null, hovered = null;
-let paintTool = 'brush', draftShape = null, undoImage = null, hue = 198, saturation = 0.77, brightness = 0.97;
+let paintTool = 'brush', draftShape = null, paintDirty = false, hue = 265.45, saturation = 191 / 243, brightness = 243 / 255;
+let toolsOpen = true, toolsPinned = true, toolsAnimation = null, toolsCloseTimer = null;
 let shutterUntil = 0, shownMeme = null, gesturePaintActive = false, lastMemeAt = 0;
+let gesturePaintOperation = null, gestureHandPoint = null;
 let spatialPoint = null, lastActivationPoint = null;
 let keyboardDrawing = false;
 let saving = false, pendingSave = null;
@@ -88,8 +100,6 @@ function gestureControls(now) {
   $('cursor-progress').style.strokeDashoffset = String(100 - dwell.progress * 100);
 }
 
-function rememberPaint() { undoImage = paintCtx.getImageData(0, 0, paint.width, paint.height); $('undo-paint').disabled = false; }
-
 function drawShape(context, bounds) {
   const x = bounds.x * paint.width, y = bounds.y * paint.height, w = bounds.w * paint.width, h = bounds.h * paint.height;
   context.save(); context.strokeStyle = $('paint-color').value; context.lineWidth = Number($('brush-size').value); context.lineJoin = 'round'; context.beginPath();
@@ -97,26 +107,36 @@ function drawShape(context, bounds) {
   else if (paintTool === 'square') context.rect(x, y, w, h);
   else { context.moveTo(x + w / 2, y); context.lineTo(x + w, y + h); context.lineTo(x, y + h); context.closePath(); }
   context.stroke(); context.restore();
+  if (context === paintCtx) paintDirty = true;
 }
 
 function paintGesture() {
-  if (phase !== 'studio' || mode !== 'painting' || pointerDown || keyboardDrawing || $('saved-section').open) return;
+  if (phase !== 'studio' || mode !== 'painting' || pointerDown || keyboardDrawing || document.querySelector('dialog[open]')) {
+    if (!pointerDown && !keyboardDrawing) { lastPaint = null; gesturePaintActive = false; gestureHandPoint = null; }
+    return;
+  }
   if (paintTool !== 'brush') {
     const bounds = shapeBounds(hands);
     if (bounds) draftShape = bounds;
     else if (draftShape) {
       // Tracking loss cancels a preview; an observed release commits it.
-      if (hands.length === 2) { rememberPaint(); drawShape(paintCtx, draftShape); }
+      if (hands.length === 2) drawShape(paintCtx, draftShape);
       draftShape = null;
     }
     return;
   }
-  const hand = hands[0];
-  const point = hand?.pose === 'pinch' && hand.pinch < 0.45 && !hovered && $('color-picker').hidden && !$('saved-section').open ? { x: hand.paint.x * paint.width, y: hand.paint.y * paint.height } : null;
-  if (point && !gesturePaintActive) rememberPaint();
+  let candidates = hands.map(hand => ({ hand, action: paintAction(hand, gesturePaintOperation === 'draw' && gestureHandPoint && distance(hand.paint, gestureHandPoint) < 0.2) })).filter(item => item.action);
+  if (candidates.some(item => item.action.operation === 'draw')) candidates = candidates.filter(item => item.action.operation === 'draw');
+  if (gestureHandPoint) candidates.sort((a, b) => distance(a.action.point, gestureHandPoint) - distance(b.action.point, gestureHandPoint));
+  const selected = !hovered && $('color-picker').hidden ? candidates[0] : null;
+  const action = selected?.action;
+  const point = action ? { x: action.point.x * paint.width, y: action.point.y * paint.height } : null;
+  const changed = !gesturePaintActive || action?.operation !== gesturePaintOperation || (gestureHandPoint && action && distance(action.point, gestureHandPoint) > 0.22);
+  if (point && changed) { lastPaint = null; paintPoint = null; }
   const now = performance.now();
-  paintPoint = point ? smoothPoint(gesturePaintActive ? paintPoint : null, point, now - paintPointAt, 45) : null;
-  paintPointAt = now; gesturePaintActive = !!point; drawStroke(paintPoint);
+  paintPoint = point ? smoothPoint(changed ? null : paintPoint, point, now - paintPointAt, 35) : null;
+  paintPointAt = now; gesturePaintActive = !!point; gesturePaintOperation = action?.operation || null; gestureHandPoint = action?.point || null;
+  drawStroke(paintPoint, action?.operation, action?.operation === 'erase' ? action.size * paint.height : undefined);
 }
 
 function updateColor() {
@@ -146,7 +166,7 @@ function resize(width, height) {
   if (paint.width) previous.getContext('2d').drawImage(paint, 0, 0);
   for (const canvas of [raw, preview, paint]) { canvas.width = width; canvas.height = height; }
   if (previous.width) paintCtx.drawImage(previous, 0, 0, width, height);
-  lastPaint = null; undoImage = null; draftShape = null; $('undo-paint').disabled = true;
+  lastPaint = null; draftShape = null;
 }
 
 function chooseMode(next) {
@@ -164,7 +184,8 @@ function chooseMode(next) {
   });
   $('effects').hidden = mode !== 'free'; $('paint-tools').hidden = mode !== 'painting'; $('meme-tools').hidden = mode !== 'meme';
   $('booth-tools').hidden = mode !== 'photobooth';
-  $('tool-panel').hidden = false; $('toggle-tools').hidden = false; $('toggle-tools').setAttribute('aria-expanded', 'true');
+  $('toggle-tools').hidden = false; $('tools-title').textContent = titles[mode];
+  setToolsOpen(toolsOpen, { animate: false });
   $('capture').replaceChildren(document.createTextNode(mode === 'photobooth' ? 'Mulai sesi ' : 'Ambil foto '));
   const key = document.createElement('kbd'); key.textContent = mode === 'photobooth' ? 'Spasi' : 'S'; $('capture').append(key);
   $('mode-title').focus({ preventScroll: true });
@@ -196,12 +217,12 @@ function startVision() {
       if (data.mode !== mode || performance.now() - data.timestamp > 350) return;
       if (performance.now() - lastResultAt > 350) fistSince = null;
       lastResultAt = performance.now();
-      hands = data.landmarks.map(points => describeHand(points.map(p => ({ ...p, x: 1 - p.x }))));
+      hands = data.landmarks.map(points => describeHand(points.map(p => ({ ...p, x: 1 - p.x })), raw.width / raw.height));
       face = mode === 'meme' && data.mode === mode ? data.face?.map(p => ({ ...p, x: 1 - p.x })) || null : null;
       shapes = Object.fromEntries(data.shapes.map(shape => [shape.categoryName, shape.score]));
       trackPointer(lastResultAt);
       paintGesture();
-      if (mode === 'photobooth' && phase === 'studio' && !$('saved-section').open) {
+      if (mode === 'photobooth' && phase === 'studio' && !document.querySelector('dialog[open]')) {
         const fist = hands.some(hand => hand.pose === 'fist');
         if (!fist) { fistSince = null; if (hands.length) fistArmed = true; }
         else if (fistArmed && !session) {
@@ -217,13 +238,18 @@ function startVision() {
 }
 
 async function startCamera() {
+  await accountReady;
+  if (!canUseStudio()) return;
   if (starting || live) return;
   if (!navigator.mediaDevices?.getUserMedia) { feedback('Kamera memerlukan HTTPS atau localhost dan browser yang mendukung kamera.', true); return; }
   const request = ++generation;
   starting = true; $('start-camera').disabled = true; $('start-camera').textContent = 'Menghubungkan...';
   $('camera-message').textContent = 'Izinkan akses kamera pada browser. Mikrofon tidak digunakan.';
   try {
-    const next = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }, audio: false });
+    profile = deviceProfile({ compact: matchMedia('(max-width: 760px), (pointer: coarse)').matches,
+      cores: navigator.hardwareConcurrency, memory: navigator.deviceMemory });
+    document.body.dataset.performance = profile.name;
+    const next = await navigator.mediaDevices.getUserMedia({ video: profile.video, audio: false });
     if (request !== generation) { next.getTracks().forEach(track => track.stop()); return; }
     stream = next; video.srcObject = next;
     await video.play();
@@ -274,11 +300,12 @@ function stopCamera(message = 'Kamera dimatikan. Foto tersimpan di Hasil.') {
   feedback(message);
 }
 
-function drawStroke(point) {
+function drawStroke(point, operation = erasing ? 'erase' : 'draw', size) {
   if (!point) { lastPaint = null; return; }
-  paintCtx.save(); paintCtx.globalCompositeOperation = erasing ? 'destination-out' : 'source-over';
+  paintDirty = true;
+  paintCtx.save(); paintCtx.globalCompositeOperation = operation === 'erase' ? 'destination-out' : 'source-over';
   paintCtx.strokeStyle = $('paint-color').value; paintCtx.fillStyle = $('paint-color').value;
-  paintCtx.lineWidth = Number($('brush-size').value) * (erasing ? 3 : 1);
+  paintCtx.lineWidth = size || Number($('brush-size').value) * (operation === 'erase' ? 3 : 1);
   paintCtx.lineCap = 'round'; paintCtx.lineJoin = 'round';
   if (lastPaint) { paintCtx.beginPath(); paintCtx.moveTo(lastPaint.x, lastPaint.y); paintCtx.lineTo(point.x, point.y); paintCtx.stroke(); }
   else { paintCtx.beginPath(); paintCtx.arc(point.x, point.y, paintCtx.lineWidth / 2, 0, Math.PI * 2); paintCtx.fill(); }
@@ -291,16 +318,24 @@ function drawEffect(config) {
   const area = config.rect || { x: 0, y: 0, w: 1, h: 1 };
   const x = Math.floor(area.x * w), y = Math.floor(area.y * h);
   const aw = Math.max(1, Math.min(w - x, Math.ceil(area.w * w))), ah = Math.max(1, Math.min(h - y, Math.ceil(area.h * h)));
-  ctx.save(); ctx.beginPath(); ctx.rect(x, y, aw, ah); ctx.clip();
+  ctx.save(); effectPath(config); ctx.clip();
   if (config.name === 'blur') { ctx.filter = `blur(${config.radius || 12}px)`; ctx.drawImage(raw, 0, 0); }
   else if (config.name === 'mosaic') {
-    small.width = 18; small.height = Math.max(1, Math.round(18 * ah / aw));
+    const block = Math.max(8, Math.min(w, h) / 60);
+    small.width = Math.max(1, Math.ceil(aw / block)); small.height = Math.max(1, Math.ceil(ah / block));
     smallCtx.drawImage(raw, x, y, aw, ah, 0, 0, small.width, small.height);
     ctx.imageSmoothingEnabled = false; ctx.drawImage(small, x, y, aw, ah);
   } else if (config.name === 'flip') {
     ctx.translate(x + aw, y + ah); ctx.scale(-1, -1); ctx.drawImage(raw, x, y, aw, ah, 0, 0, aw, ah);
   }
   ctx.restore();
+}
+
+function effectPath(config) {
+  ctx.beginPath();
+  if (config.polygon) {
+    config.polygon.forEach((p, i) => ctx[i ? 'lineTo' : 'moveTo'](p.x * preview.width, p.y * preview.height)); ctx.closePath();
+  } else { const r = config.rect || { x: 0, y: 0, w: 1, h: 1 }; ctx.rect(r.x * preview.width, r.y * preview.height, r.w * preview.width, r.h * preview.height); }
 }
 
 function memeScores() {
@@ -335,39 +370,17 @@ function drawMeme(name) {
   if (!image?.complete || !image.naturalWidth) return;
   const view = visibleCameraRect();
   const size = Math.min(view.w, view.h) * 0.28, x = view.x + view.w - size - 24, y = view.y + view.h - size - 24;
-  ctx.save(); ctx.fillStyle = '#071020'; ctx.fillRect(x - 5, y - 5, size + 10, size + 10);
-  ctx.strokeStyle = '#38bdf8'; ctx.strokeRect(x - 5, y - 5, size + 10, size + 10);
+  ctx.save(); ctx.fillStyle = visualColors.paper; ctx.fillRect(x - 5, y - 5, size + 10, size + 10);
+  ctx.strokeStyle = visualColors.green; ctx.strokeRect(x - 5, y - 5, size + 10, size + 10);
   ctx.drawImage(image, x, y, size, size); ctx.restore();
 }
 
-function photoStrip(shots) {
-  const strip = document.createElement('canvas'), w = shots[0].width, h = shots[0].height;
-  const border = Math.round(w * 0.055), gap = Math.round(w * 0.025), header = Math.round(w * 0.13), footer = Math.round(w * 0.12);
-  strip.width = w + border * 2; strip.height = header + h * 3 + gap * 2 + footer;
-  const c = strip.getContext('2d'); c.fillStyle = '#071020'; c.fillRect(0, 0, strip.width, strip.height);
-  c.strokeStyle = '#38bdf8'; c.lineWidth = Math.max(2, w * 0.002);
-  c.strokeRect(border / 3, border / 3, strip.width - border * 2 / 3, strip.height - border * 2 / 3);
-  c.fillStyle = '#a8e4ff'; c.font = `700 ${Math.round(w * 0.036)}px sans-serif`;
-  c.fillText('AFTER HOURS / GESTURE STUDIO', border, header * 0.58);
-  c.fillStyle = '#38bdf8';
-  for (let i = 0; i < 9; i++) c.fillRect(strip.width - border - 8 * i, header * 0.8, 3, 12);
-  shots.forEach((shot, i) => {
-    const y = header + i * (h + gap); c.drawImage(shot, border, y, w, h);
-    c.strokeStyle = '#38bdf8'; c.strokeRect(border - 2, y - 2, w + 4, h + 4);
-    c.fillStyle = '#071020'; c.fillRect(border, y, w * 0.075, w * 0.05);
-    c.fillStyle = '#8cdbff'; c.font = `${Math.round(w * 0.025)}px monospace`; c.fillText(`0${i + 1}`, border + w * 0.015, y + w * 0.034);
-  });
-  c.fillStyle = '#9bafc8'; c.font = `${Math.round(w * 0.018)}px monospace`;
-  c.fillText('THREE FRAMES. ONE FREQUENCY.', border, strip.height - footer * 0.45);
-  c.fillStyle = '#38bdf8'; c.font = `bold ${Math.round(w * 0.035)}px sans-serif`; c.textAlign = 'right';
-  c.fillText('EGZ', strip.width - border, strip.height - footer * 0.4);
-  return strip;
-}
-
 function beginSession() {
+  if (!canUseStudio()) return;
+  if (galleryLoading) { feedback('Menyiapkan galeri lokal. Coba lagi sebentar.'); return; }
   if (!live || session || pendingSave || phase !== 'studio' || performance.now() - lastFreshAt > 1000) return;
-  if (photos.length >= 12) { feedback('Sesi penuh. Unduh dan hapus beberapa foto sebelum mengambil lagi.', true); return; }
-  session = { shots: [], nextAt: performance.now() + 3000, paused: false, remaining: 3000 };
+  if (photos.length >= MAX_PHOTOS) { feedback('Galeri penuh. Unduh dan hapus beberapa foto sebelum mengambil lagi.', true); return; }
+  session = { shots: [], nextAt: performance.now() + 3000, paused: false, remaining: 3000, cloudConsentAtCapture: captureConsent(), ownerId: cloudIdentity().ownerId };
   for (const item of document.querySelectorAll('.shot-list li')) item.classList.remove('taken');
   $('cancel-session').hidden = false; $('capture').disabled = true; feedback('Sesi dimulai. Tiga foto akan diambil.');
 }
@@ -403,59 +416,139 @@ function showGalleryPhoto() {
 
 function openGallery() {
   if (!photos.length) return;
+  if (document.querySelector('dialog[open]:not(#saved-section)')) { pendingGalleryPreview = true; return; }
+  pendingGalleryPreview = false;
   toggleColor(false); draftShape = null; lastPaint = null;
-  showGalleryPhoto(); $('saved-section').append($('gesture-cursor')); $('saved-section').showModal();
+  showGalleryPhoto();
+  if (!$('saved-section').open) { $('saved-section').append($('gesture-cursor')); $('saved-section').showModal(); }
 }
 
-async function savePhoto(canvas, kind = mode) {
+async function savePhoto(canvas, kind = mode, consentOverride = undefined) {
+  if (!canUseStudio()) return;
+  if (galleryLoading) { feedback('Menyiapkan galeri lokal. Coba lagi sebentar.'); return; }
   if (saving || (pendingSave && pendingSave.canvas !== canvas)) return;
-  if (photos.length >= 12) { feedback('Sesi penuh. Unduh dan hapus beberapa foto sebelum mengambil lagi.', true); return; }
-  saving = true; pendingSave = { canvas, kind }; $('capture').disabled = true; $('retry-save').disabled = true;
+  if (photos.length >= MAX_PHOTOS) { feedback('Galeri penuh. Unduh dan hapus beberapa foto sebelum mengambil lagi.', true); return; }
+  const consentAtCapture = pendingSave?.cloudConsentAtCapture ?? consentOverride ?? captureConsent();
+  saving = true; pendingSave = { canvas, kind, cloudConsentAtCapture: consentAtCapture }; $('capture').disabled = true; $('retry-save').disabled = true;
+  const identity = cloudIdentity();
   try {
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-    if (!blob) throw new Error('PNG encoding failed');
-    const entry = { id: ++photoNumber, url: URL.createObjectURL(blob), name: `gesturecanvas-${kind}-${new Date().toISOString().replace(/[:.]/g, '-')}.png` };
-    photos.push(entry);
-    const card = document.createElement('article'); card.className = 'photo-card'; card.dataset.photo = entry.id;
-    const image = new Image(); image.src = entry.url; image.alt = `Foto ${kind} ${entry.id}`;
-    const title = document.createElement('p'); title.textContent = entry.name;
-    const actions = document.createElement('div'); actions.className = 'photo-actions';
-    const download = document.createElement('a'); download.href = entry.url; download.download = entry.name; download.textContent = 'Unduh PNG';
-    const print = document.createElement('button'); print.textContent = 'Print'; print.dataset.print = entry.id;
-    print.addEventListener('click', () => printPhoto(entry));
-    const remove = document.createElement('button'); remove.textContent = 'Hapus';
-    const confirmDelete = document.createElement('button'); confirmDelete.textContent = 'Ya, hapus'; confirmDelete.hidden = true;
-    const keep = document.createElement('button'); keep.textContent = 'Simpan di sesi'; keep.hidden = true;
-    const warning = document.createElement('p'); warning.textContent = 'Unduh dahulu. Foto yang dihapus tidak bisa dipulihkan.'; warning.hidden = true; warning.className = 'delete-confirm';
-    remove.addEventListener('click', () => { confirmDelete.hidden = keep.hidden = warning.hidden = false; remove.hidden = true; });
-    keep.addEventListener('click', () => { confirmDelete.hidden = keep.hidden = warning.hidden = true; remove.hidden = false; });
-    confirmDelete.addEventListener('click', () => {
-      photos = photos.filter(photo => photo !== entry); URL.revokeObjectURL(entry.url); card.remove();
-      showGalleryPhoto();
+    const blob = await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('PNG encoding timeout')), 8000);
+      canvas.toBlob(value => { clearTimeout(timeout); resolve(value); }, 'image/png');
     });
-    actions.append(download, print, remove, confirmDelete, keep); card.append(image, title, warning, actions);
-    $('saved-photos').prepend(card); galleryIndex = 0; showGalleryPhoto();
+    if (!blob) throw new Error('PNG encoding failed');
+    if (!sameCloudIdentity(identity)) return;
+    const record = { id: crypto.randomUUID(), ownerId: identity.ownerId, cloudConsentAtCapture: consentAtCapture, blob, kind, createdAt: Date.now(), name: `gesturecanvas-${kind}-${new Date().toISOString().replace(/[:.]/g, '-')}.png` };
+    let persisted = false;
+    try { await storePhoto(record, identity.ownerId); persisted = true; } catch { /* Keep the export in memory for download. */ }
+    if (!sameCloudIdentity(identity)) { await deletePhoto(record.id, identity.ownerId).catch(() => {}); return; }
+    await addPhoto(record, persisted, true);
+    if (!sameCloudIdentity(identity)) return;
+    galleryIndex = 0; showGalleryPhoto();
     pendingSave = null;
-    feedback('Foto siap di Hasil.');
+    if (kind === 'photobooth') openGallery();
+    feedback(persisted ? 'Foto tersimpan di browser perangkat ini. Unduh PNG untuk salinan berkas.' : 'Penyimpanan browser gagal atau penuh. Foto hanya sementara; unduh PNG sebelum menutup halaman.', !persisted);
   } catch {
     feedback('Foto gagal diproses. Gambar tetap disimpan sementara; pilih Coba simpan foto.', true);
   } finally {
     saving = false; $('retry-save').hidden = !pendingSave; $('retry-save').disabled = false;
-    $('capture').disabled = !live || phase !== 'studio' || !!session || !!pendingSave;
+    $('capture').disabled = !canUseStudio() || !live || phase !== 'studio' || !!session || !!pendingSave;
   }
+}
+
+async function addPhoto(record, persisted, freshCapture = false) {
+    const identity = cloudIdentity(), guestPreview = needsGuestPreview();
+    let displayBlob;
+    try { displayBlob = guestPreview ? await createGuestPreview(record.blob) : record.blob; }
+    catch { if (sameCloudIdentity(identity)) feedback('Pratinjau gagal. Foto asli tetap tersimpan; masuk untuk membuka hasilnya.', true); }
+    if (!sameCloudIdentity(identity)) return;
+    // Never fall back to exposing the original in a guest image or Print view.
+    const entry = { ...record, freshCapture, persisted, url: displayBlob ? URL.createObjectURL(displayBlob) : null };
+    photos.push(entry);
+    const card = document.createElement('article'); card.className = 'photo-card'; card.dataset.photo = entry.id;
+    const image = new Image(); if (entry.url) image.src = entry.url;
+    image.alt = entry.url ? `Foto ${entry.kind}${guestPreview ? ' · pratinjau' : ''}` : 'Pratinjau belum tersedia. Masuk untuk hasil asli.';
+    const title = document.createElement('p'); title.textContent = `${entry.name} · ${persisted ? 'Tersimpan di browser ini' : 'Sementara — unduh sekarang'}`;
+    const actions = document.createElement('div'); actions.className = 'photo-actions';
+    const download = document.createElement('a'); download.href = '#unduh'; download.download = entry.name; download.textContent = 'Unduh PNG';
+    download.addEventListener('click', event => { event.preventDefault(); authorizePhotoExport(() => {
+      const url = URL.createObjectURL(entry.blob), link = document.createElement('a');
+      link.href = url; link.download = entry.name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }, entry.ownerId); });
+    const print = document.createElement('button'); print.textContent = 'Print'; print.dataset.print = entry.id;
+    print.disabled = !entry.url; print.title = guestPreview ? 'Cetak pratinjau ber-watermark' : 'Cetak hasil asli';
+    print.addEventListener('click', () => printPhoto(entry));
+    const remove = document.createElement('button'); remove.textContent = cloudIdentity().configured ? 'Hapus lokal' : 'Hapus';
+    const confirmDelete = document.createElement('button'); confirmDelete.textContent = 'Ya, hapus'; confirmDelete.hidden = true;
+    const keep = document.createElement('button'); keep.textContent = 'Batal hapus'; keep.hidden = true;
+    const warning = document.createElement('p'); warning.textContent = 'Unduh dahulu. Foto yang dihapus tidak bisa dipulihkan.'; warning.hidden = true; warning.className = 'delete-confirm';
+    remove.addEventListener('click', () => { confirmDelete.hidden = keep.hidden = warning.hidden = false; remove.hidden = true; });
+    keep.addEventListener('click', () => { confirmDelete.hidden = keep.hidden = warning.hidden = true; remove.hidden = false; });
+    confirmDelete.addEventListener('click', async () => {
+      if (confirmDelete.disabled) return;
+      confirmDelete.disabled = keep.disabled = true;
+      try { if (entry.persisted) await deletePhoto(entry.id); }
+      catch {
+        warning.textContent = 'Hapus dari browser gagal. Coba lagi; foto masih tersedia.';
+        confirmDelete.disabled = keep.disabled = false; return;
+      }
+      photos = photos.filter(photo => photo !== entry); URL.revokeObjectURL(entry.url); card.remove();
+      $('print-area').replaceChildren();
+      showGalleryPhoto();
+    });
+    actions.append(download, print, remove, confirmDelete, keep); card.append(image, title, warning, actions);
+    preparePhotoCloud(entry, actions, title);
+    $('saved-photos').prepend(card);
+}
+
+async function restoreGallery(temporary = []) {
+  const identity = cloudIdentity();
+  try {
+    for (const photo of temporary) {
+      if (!sameCloudIdentity(identity)) return;
+      const record = { ...photo, ownerId: identity.ownerId, cloudConsentAtCapture: false };
+      try { await storePhoto(record, identity.ownerId); } catch { /* Kept in memory below. */ }
+      if (!sameCloudIdentity(identity)) { await deletePhoto(record.id, identity.ownerId).catch(() => {}); return; }
+    }
+    const records = await listPhotos();
+    if (!sameCloudIdentity(identity)) return;
+    for (const record of records) { if (!sameCloudIdentity(identity)) return; await addPhoto(record, true); }
+    for (const record of temporary) if (!records.some(item => item.id === record.id)) {
+      if (!sameCloudIdentity(identity)) return;
+      await addPhoto({ ...record, ownerId: identity.ownerId, cloudConsentAtCapture: false }, false);
+    }
+    showGalleryPhoto();
+  } catch {
+    for (const record of temporary) {
+      if (!sameCloudIdentity(identity)) return;
+      if (!photos.some(item => item.id === record.id)) await addPhoto({ ...record, ownerId: identity.ownerId, cloudConsentAtCapture: false }, false);
+    }
+    feedback('Galeri lokal tidak dapat dibuka. Foto baru hanya sementara jika penyimpanan tetap gagal.', true);
+  } finally { if (sameCloudIdentity(identity)) { showGalleryPhoto(); galleryLoading = false; } }
 }
 
 async function printPhoto(entry) {
   if (printing || !photos.includes(entry)) return;
+  return performPrint(entry);
+}
+
+async function performPrint(entry) {
+  if (printing || !entry.url || !photos.includes(entry)) return;
+  const identity = cloudIdentity();
   printing = true;
   const image = new Image(); image.src = entry.url; image.alt = 'Foto yang dipilih untuk dicetak';
   $('print-area').replaceChildren(image);
-  try { await image.decode(); window.print(); feedback('Dialog cetak ditutup. Foto tetap tersedia di sesi ini.'); }
+  try {
+    await image.decode();
+    if (!sameCloudIdentity(identity) || !photos.includes(entry)) return;
+    window.print(); feedback('Dialog cetak ditutup. Foto tetap tersedia di sesi ini.');
+  }
   catch { feedback('Pratinjau cetak gagal. Unduh PNG dan cetak melalui aplikasi foto Anda.', true); }
   finally { printing = false; }
 }
 
 async function capture() {
+  if (!canUseStudio()) return;
   if (phase !== 'studio') return;
   if (!live || performance.now() - lastFreshAt > 1000) { feedback('Kamera belum siap. Aktifkan kamera lalu coba lagi.', true); return; }
   if (mode === 'photobooth') beginSession();
@@ -481,7 +574,7 @@ function render(now) {
   if (phase === 'studio' && mode === 'free') {
     const config = automaticEffect(hands); drawEffect(config);
     $('effect-state').textContent = { none: '', blur: config.rect ? 'BLUR AREA' : 'BLUR', mosaic: 'MOSAIK', flip: 'PUTAR 180°' }[config.name];
-    if (config.rect) { const r = config.rect; ctx.save(); ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2; ctx.strokeRect(r.x * preview.width, r.y * preview.height, r.w * preview.width, r.h * preview.height); ctx.restore(); }
+    if (config.polygon) { ctx.save(); ctx.strokeStyle = visualColors.green; ctx.lineWidth = 2; effectPath(config); ctx.stroke(); ctx.restore(); }
   } else $('effect-state').textContent = '';
   if (mode === 'painting') { ctx.drawImage(paint, 0, 0); if (draftShape) drawShape(ctx, draftShape); }
   if (phase === 'studio' && mode === 'meme') {
@@ -501,15 +594,15 @@ function render(now) {
       shutterUntil = now + 900; $('shot-feedback').hidden = false; $('shot-feedback').textContent = `FOTO ${number} / 3 TERTANGKAP`;
       $(`shot-${number}`).classList.add('taken');
       if (session.shots.length === 3) {
-        const strip = photoStrip(session.shots);
+        const strip = createPhotoStrip(session.shots), consent = session.cloudConsentAtCapture && session.ownerId === cloudIdentity().ownerId;
         session = null; $('countdown').hidden = true; $('cancel-session').hidden = true; $('capture').disabled = false;
-        savePhoto(strip, 'photobooth');
+        savePhoto(strip, 'photobooth', consent);
       } else session.nextAt = now + 3000;
     }
   }
-  if (visionReady && !visionBusy && now - lastInferenceAt > 50) {
+  if (visionReady && !visionBusy && now - lastInferenceAt > profile.inferenceInterval) {
     visionBusy = true; lastInferenceAt = now; const current = worker;
-    createImageBitmap(video).then(image => {
+    createImageBitmap(video, { resizeWidth: profile.inferenceWidth, resizeQuality: 'low' }).then(image => {
       if (worker !== current || !live) { image.close(); return; }
       current.postMessage({ type: 'frame', image, timestamp: now, face: mode === 'meme' && phase === 'studio', mode }, [image]);
     }).catch(() => { visionBusy = false; });
@@ -522,21 +615,17 @@ $('enter-studio').addEventListener('click', enterStudio);
 $('manual-access').addEventListener('click', () => { manual = true; if (live) enterStudio(); else startCamera(); });
 $('capture').addEventListener('click', capture); $('cancel-session').addEventListener('click', cancelSession);
 $('retry-save').addEventListener('click', () => { if (pendingSave) savePhoto(pendingSave.canvas, pendingSave.kind); });
-$('clear-paint').addEventListener('click', () => { rememberPaint(); paintCtx.clearRect(0, 0, paint.width, paint.height); lastPaint = null; draftShape = null; });
-$('undo-paint').addEventListener('click', () => {
-  if (!undoImage) return;
-  paintCtx.clearRect(0, 0, paint.width, paint.height); paintCtx.putImageData(undoImage, 0, 0);
-  undoImage = null; lastPaint = null; draftShape = null; $('undo-paint').disabled = true;
-});
+$('clear-paint').addEventListener('click', () => { paintCtx.clearRect(0, 0, paint.width, paint.height); paintDirty = false; lastPaint = null; draftShape = null; });
 $('eraser').addEventListener('click', () => {
   erasing = !erasing; paintTool = 'brush'; draftShape = null;
   $('eraser').setAttribute('aria-pressed', String(erasing));
   document.querySelectorAll('[data-shape]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.shape === 'brush')));
 });
 document.querySelectorAll('[data-shape]').forEach(button => button.addEventListener('click', () => {
-  paintTool = button.dataset.shape; draftShape = null; erasing = false; $('eraser').setAttribute('aria-pressed', 'false');
-  document.querySelectorAll('[data-shape]').forEach(other => other.setAttribute('aria-pressed', String(other === button)));
-  $('paint-hint').textContent = paintTool === 'brush' ? 'Cubit untuk menggambar. Lepas untuk berhenti.' : 'Cubit kedua tangan untuk ukuran. Lepas untuk menempelkan.';
+  paintTool = paintTool === button.dataset.shape ? 'brush' : button.dataset.shape;
+  draftShape = null; lastPaint = null; gesturePaintActive = false; erasing = false; $('eraser').setAttribute('aria-pressed', 'false');
+  document.querySelectorAll('[data-shape]').forEach(other => other.setAttribute('aria-pressed', String(other.dataset.shape === paintTool)));
+  $('paint-hint').textContent = paintTool === 'brush' ? 'Cubit untuk melukis. Telapak atau genggaman ringan untuk menghapus.' : 'Cubit kedua tangan untuk ukuran. Lepas untuk menempelkan.';
 }));
 function toggleColor(open) { $('color-picker').hidden = !open; $('color-toggle').setAttribute('aria-expanded', String(open)); }
 $('color-toggle').addEventListener('click', () => toggleColor($('color-picker').hidden));
@@ -567,13 +656,13 @@ preview.addEventListener('keydown', event => {
   const dy = event.key === 'ArrowDown' ? 0.02 : event.key === 'ArrowUp' ? -0.02 : 0;
   if (event.key === 'Escape') { keyboardPen = false; draftShape = null; lastPaint = null; return; }
   if (paintTool === 'brush') {
-    if (event.key === ' ' || event.key === 'Enter') { keyboardPen = !keyboardPen; lastPaint = null; if (keyboardPen) rememberPaint(); }
+    if (event.key === ' ' || event.key === 'Enter') { keyboardPen = !keyboardPen; lastPaint = null; }
     keyboardPoint = { x: clamp(keyboardPoint.x + dx, 0, 1), y: clamp(keyboardPoint.y + dy, 0, 1) };
     drawStroke(keyboardPen ? { x: keyboardPoint.x * paint.width, y: keyboardPoint.y * paint.height } : null);
     feedback(keyboardPen ? 'Pena turun. Panah menggambar; Spasi mengangkat pena.' : 'Pena terangkat.');
   } else {
     draftShape ??= { x: .3, y: .3, w: .4, h: .4 };
-    if (event.key === 'Enter' || event.key === ' ') { rememberPaint(); drawShape(paintCtx, draftShape); draftShape = null; feedback('Bentuk ditempel.'); }
+    if (event.key === 'Enter' || event.key === ' ') { drawShape(paintCtx, draftShape); draftShape = null; feedback('Bentuk ditempel.'); }
     else if (event.shiftKey) { draftShape.w = clamp(draftShape.w + dx, .03, 1 - draftShape.x); draftShape.h = clamp(draftShape.h + dy, .03, 1 - draftShape.y); }
     else { draftShape.x = clamp(draftShape.x + dx, 0, 1 - draftShape.w); draftShape.y = clamp(draftShape.y + dy, 0, 1 - draftShape.h); }
   }
@@ -582,7 +671,7 @@ preview.addEventListener('blur', () => { keyboardDrawing = false; keyboardPen = 
 preview.addEventListener('pointerdown', event => {
   if (mode !== 'painting' || !live || phase !== 'studio') return;
   keyboardDrawing = false;
-  pointerDown = true; lastPaint = null; preview.setPointerCapture(event.pointerId); rememberPaint();
+  pointerDown = true; lastPaint = null; preview.setPointerCapture(event.pointerId);
   const point = canvasPoint(event.clientX, event.clientY, preview.getBoundingClientRect(), preview.width, preview.height, 'cover');
   if (paintTool === 'brush') drawStroke(point); else shapeAnchor = point;
 });
@@ -597,18 +686,52 @@ for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) preview
   if (name === 'pointerup' && draftShape) drawShape(paintCtx, draftShape);
   pointerDown = false; lastPaint = null; draftShape = null; shapeAnchor = null;
 });
-$('toggle-tools').addEventListener('click', () => {
-  $('tool-panel').hidden = !$('tool-panel').hidden;
-  $('toggle-tools').setAttribute('aria-expanded', String(!$('tool-panel').hidden));
+function setToolsOpen(open, { animate = true, focus = false } = {}) {
+  clearTimeout(toolsCloseTimer); toolsAnimation?.cancel(); toolsAnimation = null;
+  const panel = $('tool-panel'), trigger = $('toggle-tools');
+  const changed = toolsOpen !== open || panel.hidden !== !open;
+  toolsOpen = open; trigger.setAttribute('aria-expanded', String(open)); document.body.dataset.toolsOpen = String(open);
+  document.body.dataset.toolsPinned = String(toolsPinned);
+  trigger.inert = open && toolsPinned;
+  panel.inert = !open;
+  if (open) panel.hidden = false;
+  else { toggleColor(false); if (panel.contains(document.activeElement)) trigger.focus({ preventScroll: true }); }
+  if (changed && animate && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const base = getComputedStyle(panel).transform, offset = base === 'none' ? 'translateX(28px)' : `${base} translateX(28px)`;
+    const resting = { opacity: 1, transform: base }, away = { opacity: 0, transform: offset };
+    const animation = panel.animate(open ? [away, resting] : [resting, away], { duration: 180, easing: 'ease-out' });
+    toolsAnimation = animation;
+    animation.finished.then(() => { if (toolsAnimation === animation) { panel.hidden = !toolsOpen; toolsAnimation = null; } }).catch(() => {});
+  } else panel.hidden = !open;
+  if (open && focus) $('close-tools').focus({ preventScroll: true });
+}
+function scheduleToolsClose() {
+  clearTimeout(toolsCloseTimer);
+  if (!toolsPinned) toolsCloseTimer = setTimeout(() => {
+    if (!$('tool-panel').matches(':hover') && !$('toggle-tools').matches(':hover') && !$('tool-panel').contains(document.activeElement)) setToolsOpen(false);
+  }, 220);
+}
+$('toggle-tools').addEventListener('click', () => { toolsPinned = true; setToolsOpen(true, { focus: true }); });
+$('close-tools').addEventListener('click', () => { toolsPinned = false; setToolsOpen(false); });
+$('tool-panel').addEventListener('keydown', event => {
+  if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); toolsPinned = false; setToolsOpen(false); }
 });
+for (const element of [$('toggle-tools'), $('tool-panel')]) {
+  element.addEventListener('pointerenter', event => { if (event.pointerType === 'mouse' && matchMedia('(hover: hover)').matches) { clearTimeout(toolsCloseTimer); if (!toolsPinned) setToolsOpen(true); } });
+  element.addEventListener('pointerleave', scheduleToolsClose);
+  element.addEventListener('focusout', scheduleToolsClose);
+}
 $('gallery-toggle').addEventListener('click', openGallery);
 $('gallery-close').addEventListener('click', () => $('saved-section').close());
 $('gallery-prev').addEventListener('click', () => { galleryIndex--; showGalleryPhoto(); });
 $('gallery-next').addEventListener('click', () => { galleryIndex++; showGalleryPhoto(); });
 $('saved-section').addEventListener('close', () => { document.body.append($('gesture-cursor')); $('gallery-toggle').focus({ preventScroll: true }); });
+for (const dialog of document.querySelectorAll('dialog:not(#saved-section)')) {
+  dialog.addEventListener('close', () => { if (pendingGalleryPreview) openGallery(); });
+}
 
 document.addEventListener('keydown', event => {
-  if ($('saved-section').open) return;
+  if (document.querySelector('dialog[open]')) return;
   if (event.ctrlKey || event.metaKey || event.altKey || /INPUT|SELECT|TEXTAREA/.test(event.target.tagName) || event.repeat) return;
   if (event.code === 'Space' && event.target.tagName === 'BUTTON') return;
   if (/^[1-4]$/.test(event.key)) chooseMode(['free', 'painting', 'photobooth', 'meme'][Number(event.key) - 1]);
@@ -617,9 +740,36 @@ document.addEventListener('keydown', event => {
   else if (event.key === 'Escape' && session) cancelSession();
 });
 window.addEventListener('beforeunload', event => {
-  if (photos.length || session?.shots.length || undoImage || pendingSave) { event.preventDefault(); event.returnValue = ''; }
+  if (photos.some(photo => !photo.persisted) || session?.shots.length || paintDirty || pendingSave) { event.preventDefault(); event.returnValue = ''; }
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden && live) stopCamera('Kamera dijeda karena halaman tidak aktif. Aktifkan kembali untuk melanjutkan.'); });
 requestAnimationFrame(render);
 
 updateColor();
+accountReady = initializeCloud({
+  async settle() { while (saving) await new Promise(resolve => setTimeout(resolve, 25)); },
+  notice: message => feedback(message, true),
+  reset({ claimGuest = false } = {}) {
+    if (!claimGuest) pendingGalleryPreview = false;
+    const temporary = claimGuest ? photos.map(({ url, freshCapture, persisted, ...record }) => record) : [];
+    if (!claimGuest) { session = null; pendingSave = null; paintDirty = false; }
+    for (const entry of photos) URL.revokeObjectURL(entry.url);
+    photos = []; $('saved-photos').replaceChildren(); $('print-area').replaceChildren();
+    if ($('saved-section').open) $('saved-section').close();
+    if (!claimGuest) paintCtx.clearRect(0, 0, paint.width, paint.height);
+    lastPaint = null; gesturePaintActive = false; galleryLoading = true; showGalleryPhoto();
+    $('countdown').hidden = !session; $('cancel-session').hidden = !session;
+    $('capture').disabled = !live || phase !== 'studio' || !!session || !!pendingSave;
+    return temporary;
+  },
+  restore: restoreGallery,
+  async persist(entry) {
+    if (entry.ownerId !== cloudIdentity().ownerId || !photos.includes(entry)) return;
+    const identity = cloudIdentity();
+    const { url, persisted, freshCapture, ...record } = entry;
+    try {
+      await storePhoto(record, identity.ownerId);
+      if (!sameCloudIdentity(identity)) await deletePhoto(record.id, identity.ownerId);
+    } catch { /* Cloud succeeded; local cache may remain temporary. */ }
+  },
+});

@@ -1,0 +1,39 @@
+/* Palette observed on github.com/events/universe/recap, 2026-10-29.
+   EGZ adapts the palette; illustrations and composition are original. */
+@font-face{font-family:"Mona Sans";src:url("fonts/mona-sans.woff2") format("woff2");font-weight:200 900;font-style:normal;font-stretch:75% 125%;font-display:swap}
+:root{
+  color-scheme:light;
+  --font-sans:"Mona Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  --font-mono:ui-monospace,"Cascadia Code",Consolas,monospace;
+  --festival-white:#ffffff;
+  --festival-ink:#000000;
+  --festival-green:#0d6731;
+  --festival-mint:#8cf2a6;
+  --festival-lime:#d1f441;
+  --festival-purple:#8534f3;
+  --festival-lilac:#c898fd;
+  --festival-pink:#ff80d2;
+  --festival-yellow:#ffe777;
+  --bg:var(--festival-white);
+  --panel:var(--festival-white);
+  --panel-glass:#fffffff5;
+  --surface:#f2f5f3;
+  --ink:var(--festival-ink);
+  --muted:#58635b;
+  --line:#d2d9d4;
+  --control-border:#77827a;
+  --control:#f9fbf9;
+  --control-hover:#e4ebe6;
+  --selected:#e4f8e9;
+  --accent:var(--festival-green);
+  --blue:var(--accent);
+  --focus:#0055d5;
+  --danger:#ae0b29;
+  --backdrop:#163a2b45;
+  --shadow:0 12px 40px #163a2b12,0 2px 8px #163a2b0a;
+  --radius-sm:8px;
+  --radius-lg:24px;
+  font-family:var(--font-sans);
+  font-synthesis:none;
+  font-optical-sizing:auto;
+}

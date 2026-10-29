@@ -1,20 +1,55 @@
 export const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 export const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
-export function describeHand(points) {
-  const palm = Math.max(distance(points[0], points[9]), 0.001);
-  const extended = [distance(points[4], points[17]) > distance(points[3], points[17]),
-    ...[[8, 6], [12, 10], [16, 14], [20, 18]].map(([tip, joint]) => distance(points[tip], points[0]) > distance(points[joint], points[0]))];
-  const pinch = distance(points[4], points[8]) / palm;
+export function describeHand(points, aspect = 1) {
+  // Landmarks normalize x and y independently; pose geometry uses image units.
+  const metric = points.map(p => ({ x: p.x * aspect, y: p.y }));
+  const palm = Math.max(distance(metric[0], metric[9]), 0.001);
+  const extended = [distance(metric[4], metric[17]) > distance(metric[3], metric[17]) * 1.08,
+    ...[[8, 6], [12, 10], [16, 14], [20, 18]].map(([tip, joint]) => distance(metric[tip], metric[0]) > distance(metric[joint], metric[0]) * 1.08)];
+  const pinch = distance(metric[4], metric[8]) / palm;
+  const center = { x: (points[0].x + points[5].x + points[9].x + points[17].x) / 4,
+    y: (points[0].y + points[5].y + points[9].y + points[17].y) / 4 };
+  // Contact away from the palm distinguishes a drawing pinch from a tucked fist.
+  const pinchReach = distance(metric[8], { x: center.x * aspect, y: center.y }) / palm;
+  const pinching = pinch < 0.32 && pinchReach > 0.35;
   let pose = 'none';
-  if (!extended.some(Boolean)) pose = 'fist';
-  else if (pinch < 0.32) pose = 'pinch';
+  if (pinching) pose = 'pinch';
+  else if (!extended.some(Boolean)) pose = 'fist';
   else if (extended.filter(Boolean).length >= 4) pose = 'open';
   else if (extended[1] && extended[2] && !extended[3] && !extended[4]) pose = 'peace';
   else if (extended[0] && extended[1] && !extended[2] && !extended[3] && !extended[4]) pose = points[8].y < points[5].y ? 'l_up' : 'l_down';
   else if (extended[1] && extended.filter(Boolean).length === 1) pose = 'point';
-  return { points, pose, palm, pinch, gap: distance(points[8], points[12]) / palm,
+  return { points, pose, palm, pinch, pinchReach, extended, center, aspect, gap: distance(metric[8], metric[12]) / palm,
     paint: { x: (points[4].x + points[8].x) / 2, y: (points[4].y + points[8].y) / 2 } };
+}
+
+export function paintAction(hand, continuing = false) {
+  if (!hand) return null;
+  if (hand.pinch < (continuing && hand.pose !== 'fist' ? 0.45 : 0.32) && hand.pinchReach > 0.35) return { operation: 'draw', point: hand.paint };
+  const fingers = hand.extended.slice(1).filter(Boolean).length;
+  if (fingers >= 4 || (fingers <= 1 && !hand.extended[1] && !hand.extended[2])) {
+    return { operation: 'erase', point: hand.center, size: clamp(hand.palm * 1.15, 0.05, 0.3) };
+  }
+  return null;
+}
+
+export function fingerPolygon(hands) {
+  const points = hands.flatMap(hand => [hand.points[4], hand.points[8], {
+    x: hand.points[5].x * 0.65 + hand.points[2].x * 0.35,
+    y: hand.points[5].y * 0.65 + hand.points[2].y * 0.35,
+  }]).map(p => ({ x: clamp(p.x, 0, 1), y: clamp(p.y, 0, 1) }))
+    .sort((a, b) => a.x - b.x || a.y - b.y);
+  const unique = points.filter((p, i) => !i || distance(p, points[i - 1]) > 1e-6);
+  const cross = (a, b, c) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+  const side = source => {
+    const hull = [];
+    for (const p of source) { while (hull.length > 1 && cross(hull.at(-2), hull.at(-1), p) <= 0) hull.pop(); hull.push(p); }
+    return hull.slice(0, -1);
+  };
+  const hull = [...side(unique), ...side([...unique].reverse())];
+  const area = Math.abs(hull.reduce((sum, p, i) => { const next = hull[(i + 1) % hull.length]; return sum + p.x * next.y - next.x * p.y; }, 0)) / 2;
+  return hull.length >= 3 && area > 0.00001 ? hull : null;
 }
 
 // A held target fires once; moving away or losing tracking rearms it.
@@ -73,13 +108,12 @@ export function expressionScores(hands, face, shapes, tongue = 0) {
 export function automaticEffect(hands) {
   const pair = hands.slice(0, 2);
   if (pair.length === 2 && pair.every(hand => hand.pose.startsWith('l_'))) {
-    const points = pair.flatMap(hand => [hand.points[4], hand.points[8], hand.points[5]]);
-    const x = clamp(Math.min(...points.map(p => p.x)) - 0.025, 0, 0.999);
-    const y = clamp(Math.min(...points.map(p => p.y)) - 0.025, 0, 0.999);
-    const right = clamp(Math.max(...points.map(p => p.x)) + 0.025, x + 0.001, 1);
-    const bottom = clamp(Math.max(...points.map(p => p.y)) + 0.025, y + 0.001, 1);
+    const polygon = fingerPolygon(pair);
+    if (!polygon) return { name: 'none' };
+    const x = Math.min(...polygon.map(p => p.x)), y = Math.min(...polygon.map(p => p.y));
+    const right = Math.max(...polygon.map(p => p.x)), bottom = Math.max(...polygon.map(p => p.y));
     return { name: pair.every(h => h.pose === 'l_up') ? 'blur' : pair.every(h => h.pose === 'l_down') ? 'flip' : 'mosaic',
-      rect: { x, y, w: right - x, h: bottom - y } };
+      polygon, rect: { x, y, w: right - x, h: bottom - y } };
   }
   const peace = hands.find(hand => hand.pose === 'peace');
   return { name: peace ? 'blur' : 'none', radius: peace ? 4 + clamp(peace.gap, 0, 1.4) * 10 : 0 };
