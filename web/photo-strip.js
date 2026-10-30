@@ -30,7 +30,7 @@ export function createPhotoStrip(shots) {
   c.font = `650 ${Math.round(w * .043)}px "Mona Sans", sans-serif`;
   c.fillText('GOOD TIMES.', border + w * .15, header * .25 + w * .036);
   c.fillStyle = p.green; c.font = `500 ${Math.max(7, Math.round(w * .014))}px monospace`;
-  c.fillText('GESTURE STUDIO / THREE LITTLE MOMENTS', border, header * .85);
+  c.fillText('EGZ STUDIO / THREE LITTLE MOMENTS', border, header * .85);
   star(c, strip.width - border - w * .045, header * .44, w * .034, p.lilac, 6);
   star(c, strip.width - border - w * .095, header * .72, w * .012, p.green);
 

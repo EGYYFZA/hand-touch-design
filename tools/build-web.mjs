@@ -8,7 +8,7 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 // Publish explicit public source files; never recursively copy a source folder
 // that may also contain local credentials, captures, or editor output.
-const publicFiles = ['index.html', 'privacy.html', 'theme.css', 'styles.css', 'icon.svg', 'app.js', 'photo-strip.js', 'fonts/mona-sans.woff2',
+const publicFiles = ['index.html', 'privacy.html', 'theme.css', 'styles.css', 'motion.css', 'home-motion.js', 'icon.svg', 'app.js', 'photo-strip.js', 'fonts/mona-sans.woff2',
   'gestures.js', 'vision-worker.js', 'photo-store.js', 'photo-preview.js', 'device-profile.js',
   'cloud-client.js', 'account.html', 'account.js', 'account.css', 'admin.html',
   'cloud-gallery.html', 'cloud-gallery.js', 'cloud-viewer.js', 'studio-cloud.js', 'studio-cloud.css',

@@ -54,3 +54,8 @@ button.primary:hover:not(:disabled),.photo-actions>a:hover{background:var(--fest
 .cursor-track{stroke:#fff}.cursor-track,#cursor-progress{filter:drop-shadow(0 0 1px #0008)}#gesture-cursor>span{background:var(--festival-lime);box-shadow:0 0 0 1px var(--festival-green)}
 @media(max-width:760px){.studio-celebration{opacity:.7}}
 @page{margin:10mm}@media print{html,body{height:auto;overflow:visible;background:white}.topbar,main,.skip-link,#gesture-cursor,dialog{display:none!important}dialog::backdrop{display:none}#print-area{display:block;text-align:center}#print-area img{max-width:190mm;max-height:270mm;object-fit:contain;display:block;margin:auto}}
+
+/* Privacy is a document; its main content follows the full text height. */
+html.privacy-document{height:auto;min-height:100%;overflow-x:hidden;overflow-y:auto}
+html.privacy-document body.privacy-page{height:auto;min-height:100dvh;overflow:visible}
+.privacy-page>main{height:auto}

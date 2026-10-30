@@ -2,15 +2,15 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="EGZ Gesture Studio. Ubah gerakan tangan menjadi efek, lukisan, foto, dan meme. Kamera diproses di perangkat Anda.">
+  <meta name="description" content="EGZ studio. Ubah gerakan tangan menjadi efek, lukisan, foto, dan meme. Kamera diproses di perangkat Anda.">
   <meta name="theme-color" content="#ffffff">
-  <title>EGZ — Gesture Studio</title>
+  <title>EGZ studio</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="studio-cloud.css">
-</head>
+<link rel="stylesheet" href="motion.css"></head>
 <body data-phase="setup" data-mode="free">
   <a class="skip-link" href="#workspace">Langsung ke studio</a>
   <header class="topbar">
-    <a class="brand" href="./" aria-label="EGZ Gesture Studio, beranda"><strong>EGZ<span>↗</span></strong></a>
+    <a class="brand" href="./" aria-label="EGZ studio, beranda"><strong>EGZ <span class="brand-label">studio</span></strong></a>
     <nav aria-label="Mode studio" id="mode-nav" inert>
       <button class="mode" data-mode="free" aria-pressed="false">Efek Tangan</button>
       <button class="mode" data-mode="painting" aria-pressed="false">Painting</button>
@@ -20,19 +20,28 @@
     <div class="header-actions"><span id="camera-state" class="badge">KAMERA OFF</span><button id="gallery-toggle" disabled>Hasil <span id="photo-count">0</span></button></div>
   </header>
   <main id="workspace" tabindex="-1">
-    <h1 id="mode-title" class="sr-only" tabindex="-1">EGZ Gesture Studio</h1>
+    <h1 id="mode-title" class="sr-only" tabindex="-1">EGZ studio</h1>
     <div class="studio-grid">
       <section class="stage" aria-label="Pratinjau kamera">
-        <svg class="studio-celebration" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" fill="none" aria-hidden="true"><g stroke="var(--line)"><path d="M0 180h1440M0 720h1440M240 0v900M1200 0v900"/></g><g transform="translate(275 290) rotate(-14)"><rect x="-58" y="-58" width="116" height="116" rx="28" fill="var(--festival-mint)"/><path d="M-27 0h54M0-27v54" stroke="var(--festival-green)" stroke-width="8" stroke-linecap="round"/></g><path d="m1150 265 15 34 37 3-29 23 8 36-31-19-31 19 8-36-29-23 37-3Z" fill="var(--festival-lilac)"/><g transform="translate(1130 640) rotate(17)"><rect x="-70" y="-28" width="140" height="56" rx="28" fill="var(--festival-yellow)"/><circle cx="-22" r="6" fill="var(--festival-green)"/><circle cx="22" r="6" fill="var(--festival-green)"/></g><path d="M290 625q-45 10-34 52t55 19" stroke="var(--festival-pink)" stroke-width="20" stroke-linecap="round"/><circle cx="1110" cy="450" r="8" fill="#0fbf3e"/><circle cx="350" cy="450" r="5" fill="var(--festival-purple)"/></svg>
+        <svg class="studio-celebration" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" fill="none" aria-hidden="true">
+          <g stroke="var(--line)"><path d="M0 180h1440M0 720h1440M240 0v900M1200 0v900"/></g>
+          <g class="celebration-parallax">
+            <g class="celebration-piece piece-mint"><g transform="translate(275 290) rotate(-14)"><rect x="-58" y="-58" width="116" height="116" rx="28" fill="var(--festival-mint)"/><path d="M-27 0h54M0-27v54" stroke="var(--festival-green)" stroke-width="8" stroke-linecap="round"/></g></g>
+            <g class="celebration-piece piece-star"><path d="m1150 265 15 34 37 3-29 23 8 36-31-19-31 19 8-36-29-23 37-3Z" fill="var(--festival-lilac)"/></g>
+            <g class="celebration-piece piece-ticket"><g transform="translate(1130 640) rotate(17)"><rect x="-70" y="-28" width="140" height="56" rx="28" fill="var(--festival-yellow)"/><circle cx="-22" r="6" fill="var(--festival-green)"/><circle cx="22" r="6" fill="var(--festival-green)"/></g></g>
+            <g class="celebration-piece piece-ribbon"><path d="M290 625q-45 10-34 52t55 19" stroke="var(--festival-pink)" stroke-width="20" stroke-linecap="round"/></g>
+            <g class="celebration-piece piece-dots"><circle cx="1110" cy="450" r="8" fill="#0fbf3e"/><circle cx="350" cy="450" r="5" fill="var(--festival-purple)"/></g>
+          </g>
+        </svg>
         <video id="video" autoplay muted playsinline hidden></video>
         <canvas id="preview" width="1280" height="720" tabindex="0" aria-label="Pratinjau kamera; pada Painting, panah menggerakkan pena atau bentuk, Spasi menggambar, Enter menempel bentuk, Shift dan panah mengubah ukuran"></canvas>
         <div id="empty-state" class="empty-state">
-          <svg class="hand-art" viewBox="0 0 160 160" fill="none" aria-hidden="true"><path d="M80 12 98 39 130 32 128 65 150 85 121 101 118 134 87 123 61 145 47 115 15 109 29 79 15 50 47 46 58 17 80 31Z" fill="var(--festival-lime)" stroke="var(--festival-green)" stroke-width="2.5" stroke-linejoin="round"/><path d="M37 83 13 73M124 83l23-17" stroke="var(--festival-green)" stroke-width="3" stroke-linecap="round"/><ellipse cx="65" cy="74" rx="4" ry="7" fill="var(--festival-green)"/><ellipse cx="93" cy="74" rx="4" ry="7" fill="var(--festival-green)"/><path d="M65 94q14 15 28-2" stroke="var(--festival-green)" stroke-width="3" stroke-linecap="round"/><path d="m132 13 3 9 9 3-9 3-3 9-3-9-9-3 9-3Z" fill="var(--festival-purple)"/><circle cx="25" cy="131" r="7" fill="var(--festival-pink)"/></svg>
-          <h2>Gesture Studio</h2><p id="camera-message">Gerakkan tangan. Ciptakan sesuatu.</p><button id="start-camera" class="primary">Aktifkan kamera <span aria-hidden="true">↗</span></button><p class="privacy-note">Tanpa login. Video tetap di perangkat. <a href="privacy.html" target="_blank" rel="noopener">Privasi</a></p>
+          <svg class="hand-art" viewBox="0 0 160 160" fill="none" aria-hidden="true"><g class="mascot-body"><path d="M80 12 98 39 130 32 128 65 150 85 121 101 118 134 87 123 61 145 47 115 15 109 29 79 15 50 47 46 58 17 80 31Z" fill="var(--festival-lime)" stroke="var(--festival-green)" stroke-width="2.5" stroke-linejoin="round"/><path d="M37 83 13 73" stroke="var(--festival-green)" stroke-width="3" stroke-linecap="round"/><path class="mascot-wave" d="M124 83l23-17" stroke="var(--festival-green)" stroke-width="3" stroke-linecap="round"/><g class="mascot-face"><g class="mascot-eyes"><ellipse cx="65" cy="74" rx="4" ry="7" fill="var(--festival-green)"/><ellipse cx="93" cy="74" rx="4" ry="7" fill="var(--festival-green)"/></g><path d="M65 94q14 15 28-2" stroke="var(--festival-green)" stroke-width="3" stroke-linecap="round"/></g></g><path class="mascot-spark" d="m132 13 3 9 9 3-9 3-3 9-3-9-9-3 9-3Z" fill="var(--festival-purple)"/><circle cx="25" cy="131" r="7" fill="var(--festival-pink)"/></svg>
+          <h2>EGZ studio</h2><p id="camera-message">Gerakkan tangan. Ciptakan sesuatu.</p><button id="start-camera" class="primary">Aktifkan kamera</button><p class="privacy-note">Tanpa login. Video tetap di perangkat. <a href="privacy.html" target="_blank" rel="noopener">Privasi</a></p>
         </div>
         <div id="calibration" class="calibration" hidden>
           <div><span class="eyebrow" id="calibration-step">01 / KENALI TANGAN</span><h2 id="calibration-title" aria-live="polite">Buka kedua telapak tangan.</h2><p id="calibration-copy">Posisikan di depan kamera. Tahan hingga indikator penuh.</p><progress id="calibration-progress" max="1" value="0" aria-label="Progres pengenalan tangan"></progress></div>
-          <button id="enter-studio" class="primary" hidden>Arahkan telunjuk ke sini <span aria-hidden="true">↗</span></button>
+          <button id="enter-studio" class="primary" hidden>Arahkan telunjuk ke sini</button>
         </div>
         <div id="menu-screen" class="menu-screen" hidden><h2>Pilih mode</h2><p>Tunjuk dan tahan 0,8 detik.</p><div class="menu-choices">
           <button data-mode="free"><strong>Efek Tangan</strong><small>Blur, mosaik, putar</small></button>
@@ -80,4 +89,5 @@
   </dialog>
   <dialog id="studio-cloud-gallery" class="saved-section" aria-labelledby="cloud-view-heading"><div class="saved-heading"><h2 id="cloud-view-heading">Foto cloud</h2><button id="cloud-view-close" type="button">Kembali</button></div><div id="cloud-view-body" class="saved-photos"></div><div class="gallery-navigation"><button id="cloud-view-prev" type="button" aria-label="Foto cloud sebelumnya">←</button><span id="cloud-view-position" role="status"></span><button id="cloud-view-next" type="button" aria-label="Foto cloud berikutnya">→</button></div><p id="cloud-view-status" class="gallery-note" role="status" aria-live="polite"></p></dialog>
   <script type="module" src="app.js"></script>
+  <script type="module" src="home-motion.js"></script>
 </body></html>

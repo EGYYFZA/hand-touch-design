@@ -1,9 +1,204 @@
-<!doctype html><html lang="id" class="privacy-document"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privasi & lisensi — GestureCanvas</title><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="styles.css"></head>
-<body class="privacy-page"><a href="./">← Kembali ke studio</a><h1>Privasi & lisensi</h1>
-<h2>Kamera di perangkat Anda</h2><p>Kamera hanya diminta setelah Anda menekan Aktifkan kamera atau Gunakan kontrol tombol. Mikrofon tidak diminta. Pemrosesan video, wajah, dan tangan berjalan di browser. Video langsung dan landmark tidak dikirim ke cloud; hanya hasil foto akhir yang dapat dikirim setelah persetujuan.</p>
-<h2>Akun dan persetujuan cloud</h2><p>Kamera, seluruh mode, pengambilan foto, galeri lokal, dan Print dapat digunakan tanpa login. Tombol Unduh PNG meminta login pada dialog di studio. Foto tamu tetap di perangkat dan dipindahkan ke cache akun setelah login eksplisit. Login tidak otomatis mengirim foto tamu ke cloud. Hanya akun pemilik dapat membuka salinan cloud miliknya di perangkat lain. Pengelola EGZ (EGYYFZA) dapat melihat foto yang Anda setujui untuk arsip studio melalui akses admin dengan autentikasi dua langkah. Tidak ada galeri publik.</p><p>Penyimpanan cloud dan arsip admin memerlukan persetujuan yang awalnya nonaktif. Tanpa persetujuan, foto tetap lokal. Persetujuan tidak mencakup publikasi atau pelatihan model. Mengaktifkannya mengizinkan pengiriman foto baru, tanpa mengunggah foto lama otomatis. Untuk menyimpan foto lama atau foto tamu yang sudah dipindahkan ke akun, aktifkan persetujuan lalu pilih Simpan foto ini ke cloud pada foto yang dimaksud. Anda dapat mencabut persetujuan di dialog Akun.</p><p>Foto PNG yang lebih besar dari batas unggahan 3 MB diperkecil khusus untuk salinan cloud dengan mempertahankan proporsinya. Foto asli pada galeri lokal dan unduhan lokal tetap utuh; unduhan dari galeri cloud mengikuti salinan cloud yang mungkin lebih kecil.</p><p>Semua salinan cloud pengguna dan admin memiliki masa simpan 30 hari sejak unggahan pertama berhasil. Membuka atau mengunduh foto tidak memperpanjang masa simpan. Akses dihentikan ketika kedaluwarsa dan foto dihapus otomatis. Foto yang telah kedaluwarsa tidak otomatis diunggah ulang dari cache lokal. Tombol Hapus cloud menghapus salinan cloud untuk pengguna dan admin; foto lokal serta berkas unduhan tetap Anda kelola sendiri.</p>
-<h2>Foto lokal dan cetakan</h2><p>Hasil disimpan di browser dengan batas pengambilan 12 foto/strip dan 40 MiB. Penggabungan foto tamu ke akun mempertahankan foto yang sudah ada; jika jumlah gabungan melampaui batas, hapus sebagian sebelum mengambil foto baru. Cache akun dipisahkan per UID dan dibersihkan saat keluar atau berganti akun. Foto tamu belum terikat identitas; orang yang memakai profil browser sama dapat membukanya. Hapus foto tamu setelah selesai pada perangkat bersama. Foto demo lama berada di ruang terpisah dan tidak otomatis dimasukkan ke akun.</p><p>Jika penyimpanan gagal, penuh, atau diblokir, hasil ditahan sementara di memori tab dan diberi keterangan. Hapus lokal hanya menghapus salinan browser. Penyimpanan browser bukan cadangan permanen: menghapus data situs, mode privat, atau pembersihan browser dapat menghilangkannya. Foto yang belum diunggah tidak tersedia di perangkat lain.</p><p>Unduh PNG meminta akun aktif dan menyimpan berkas di perangkat. Jika layanan akun belum tersedia, foto tetap dapat dipakai di studio dan dicetak; pengunduhan menunggu login berhasil. Salinan lokal dan berkas unduhan tidak dihapus oleh retensi cloud. Orang yang menguasai perangkat/profil browser tetap dapat mengakses data lokal. Login untuk unduh merupakan alur aplikasi, bukan perlindungan dari tangkapan layar atau akses fisik ke perangkat.</p><p>Sebelum login, galeri dan Print menampilkan pratinjau ber-watermark dengan sisi terpanjang maksimal 960 piksel. Setelah login, hasil asli tersedia untuk pratinjau, Print, dan Unduh PNG. Foto asli tetap disimpan lokal untuk pemulihan; watermark tidak mencegah Inspect, screenshot, atau akses oleh pemilik profil browser. Print membuka dialog cetak browser untuk foto pilihan Anda. Anda menentukan printer, kertas, dan skala. Aplikasi tidak dapat memastikan apakah benar-benar tercetak. Dialog cetak dapat menggunakan layanan printer atau penyimpanan PDF yang Anda pilih.</p>
-<h2>Perangkat</h2><p>Studio mendukung kontrol sentuh, mouse, dan keyboard. Laptop atau desktop direkomendasikan untuk ruang gerak kedua tangan. Perangkat dengan layar kecil, input sentuh, atau kemampuan terbatas memakai preferensi kamera dan pelacakan yang lebih ringan. Resolusi aktual mengikuti kemampuan kamera dan browser. Akses kamera memerlukan HTTPS atau localhost serta izin Anda.</p>
-<h2>Model dan penyedia hosting</h2><p>Model dan runtime MediaPipe dimuat dari situs ini. Berkas berasal dari Google dan memiliki ketentuan terpisah. Browser berkomunikasi dengan layanan akun pada situs ini; backend menggunakan Supabase untuk autentikasi, metadata, dan penyimpanan privat di region Singapore. Penyedia hosting tetap dapat mencatat permintaan situs dan informasi koneksi menurut kebijakan layanannya. Cookie sesi dipakai untuk login; token akses tidak disimpan di penyimpanan JavaScript browser.</p>
-<h2>Open source</h2><p>Kode proyek menggunakan <a href="LICENSE">lisensi MIT</a>. Lihat <a href="THIRD_PARTY.md">atribusi pihak ketiga</a> dan <a href="licenses/Apache-2.0.txt">Apache-2.0</a>. Lisensi kode tidak memberikan hak atas foto pengguna atau merek pihak ketiga.</p>
-<p><a href="https://github.com/EGYYFZA/hand-touch-design" rel="noopener noreferrer">Repository GitHub</a></p></body></html>
+<!doctype html><html lang="id" class="privacy-document"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privasi & lisensi — EGZ studio</title><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="motion.css"></head>
+<body class="privacy-page">
+  <main id="konten-utama">
+    <a href="./">← Kembali ke studio</a>
+    <header>
+      <h1>Kebijakan Privasi &amp; Lisensi</h1>
+      <p><small>Terakhir diperbarui: 30 Oktober 2026</small></p>
+      <p>
+        Privasi Anda penting bagi EGZ studio. Halaman ini menjelaskan informasi
+        yang digunakan saat Anda mengakses studio, bagaimana foto disimpan,
+        pilihan yang tersedia bagi Anda, dan teknologi pendukung layanan.
+      </p>
+    </header>
+
+    <section aria-labelledby="kamera">
+      <h2 id="kamera">1. Akses kamera dan pemrosesan gambar</h2>
+      <p>
+        Akses kamera diminta ketika Anda mengaktifkan fitur studio yang
+        membutuhkannya. Izin kamera dikelola oleh browser dan dapat Anda
+        ubah melalui pengaturan perangkat atau browser.
+      </p>
+      <p>
+        Pemrosesan video dan pelacakan posisi tangan atau wajah untuk kontrol
+        interaktif dilakukan di browser pada perangkat Anda. Dalam penggunaan
+        normal, aliran video kamera dan hasil pelacakan tidak diunggah ke
+        penyimpanan cloud EGZ studio. Pengiriman hasil foto ke cloud hanya
+        dilakukan melalui fitur yang memerlukan persetujuan Anda.
+      </p>
+      <p>Fitur studio yang dijelaskan di sini tidak memerlukan akses mikrofon.</p>
+    </section>
+
+    <section aria-labelledby="informasi">
+      <h2 id="informasi">2. Informasi yang diproses</h2>
+      <p>Bergantung pada fitur yang digunakan, informasi dapat mencakup:</p>
+      <ul>
+        <li>Data akun yang diperlukan untuk masuk dan mengelola sesi pengguna.</li>
+        <li>Foto yang dibuat dan disimpan secara lokal di browser.</li>
+        <li>Foto dan informasi terkait yang Anda pilih untuk disimpan ke cloud.</li>
+        <li>Informasi teknis dasar, seperti data koneksi dan catatan permintaan, yang dapat diproses oleh penyedia layanan untuk operasional dan keamanan situs.</li>
+      </ul>
+      <p>
+        Informasi tersebut digunakan untuk menjalankan fitur studio,
+        mengelola akun, menyediakan penyimpanan berdasarkan pilihan Anda,
+        serta menjaga operasional layanan.
+      </p>
+    </section>
+
+    <section aria-labelledby="persetujuan">
+      <h2 id="persetujuan">3. Akun dan persetujuan penyimpanan cloud</h2>
+      <p>
+        Fitur kamera, pembuatan foto, galeri lokal, dan pencetakan dapat
+        digunakan tanpa login. Fitur Unduh PNG memerlukan akun yang aktif.
+        Sebelum login, beberapa tampilan pratinjau atau hasil cetak dapat
+        menampilkan watermark.
+      </p>
+      <p>
+        Penyimpanan foto ke cloud dan penggunaan arsip studio dikelola melalui
+        persetujuan yang pada awalnya tidak diaktifkan. Tanpa persetujuan
+        penyimpanan cloud, foto yang Anda buat tetap berada di penyimpanan
+        lokal browser, sepanjang penyimpanan tersebut tersedia.
+      </p>
+      <p>
+        Login tidak secara otomatis mengunggah foto yang sebelumnya dibuat
+        sebagai tamu. Mengaktifkan persetujuan juga tidak otomatis mengunggah
+        koleksi foto lama. Untuk menyimpan foto lama ke cloud, Anda perlu
+        memilih fitur <strong>Simpan foto ini ke cloud</strong> pada foto
+        yang bersangkutan.
+      </p>
+      <p>
+        Foto yang disimpan di cloud dapat diakses melalui akun terkait.
+        Apabila Anda menyetujui arsip studio, pengelola layanan juga dapat
+        mengakses foto yang tercakup dalam persetujuan tersebut untuk keperluan
+        pengelolaan arsip. EGZ studio tidak menyediakan galeri foto publik.
+        Persetujuan penyimpanan atau pengarsipan tidak sekaligus berarti
+        persetujuan untuk memublikasikan foto atau menggunakannya sebagai
+        data pelatihan model AI.
+      </p>
+      <p>
+        Anda dapat menarik persetujuan melalui pengaturan Akun. Penarikan
+        persetujuan menghentikan penyimpanan baru sesuai pengaturan terkait,
+        tetapi tidak otomatis menghapus foto yang sudah berada di cloud.
+        Untuk menghapus foto tersebut, gunakan fitur <strong>Hapus cloud</strong>.
+      </p>
+    </section>
+
+    <section aria-labelledby="lokal">
+      <h2 id="lokal">4. Penyimpanan lokal, unduhan, dan pencetakan</h2>
+      <p>
+        Foto dapat disimpan di penyimpanan browser agar dapat dilihat dan
+        digunakan kembali pada perangkat yang sama. Jika Anda masuk ke akun,
+        foto tamu dapat dipindahkan ke ruang lokal akun sesuai alur aplikasi,
+        tanpa otomatis dikirim ke cloud.
+      </p>
+      <p>
+        Data yang tersimpan di browser dapat hilang ketika Anda menghapus data
+        situs, menggunakan mode privat, mengganti profil browser, atau ketika
+        penyimpanan perangkat tidak tersedia. Foto lokal juga berpotensi
+        diakses oleh orang lain yang menggunakan profil browser atau perangkat
+        yang sama. Sebaiknya hapus foto setelah menggunakan perangkat bersama.
+      </p>
+      <p>
+        Unduh PNG menyimpan berkas ke perangkat yang Anda gunakan. Fitur Print
+        menggunakan mekanisme pencetakan browser, termasuk printer atau opsi
+        simpan ke PDF yang Anda pilih. Watermark pada pratinjau merupakan
+        penanda visual dan bukan jaminan pencegahan penyalinan gambar.
+      </p>
+      <p>
+        Untuk menyesuaikan kapasitas penyimpanan, salinan foto yang diunggah
+        ke cloud dapat dioptimalkan ukuran berkasnya. Hal ini tidak mengubah
+        berkas lokal yang masih tersedia di browser; hasil unduhan dari cloud
+        dapat berbeda ukurannya dari berkas lokal.
+      </p>
+    </section>
+
+    <section aria-labelledby="retensi">
+      <h2 id="retensi">5. Masa penyimpanan dan penghapusan</h2>
+      <p>
+        Foto yang berhasil disimpan ke cloud memiliki masa simpan
+        <strong>30 hari sejak unggahan pertama</strong>. Membuka atau
+        mengunduh foto tidak memperpanjang periode tersebut. Setelah masa
+        simpan berakhir, akses melalui layanan dihentikan dan penghapusan
+        otomatis dijalankan sesuai mekanisme penyimpanan yang berlaku.
+      </p>
+      <p>
+        Fitur <strong>Hapus cloud</strong> digunakan untuk menghapus salinan
+        cloud yang terkait dengan foto tersebut, termasuk yang tersedia dalam
+        arsip studio. Penghapusan dari cloud tidak menghapus foto yang masih
+        tersimpan di browser, berkas yang telah diunduh, atau hasil cetak.
+        Anda perlu mengelola salinan tersebut secara terpisah.
+      </p>
+    </section>
+
+    <section aria-labelledby="pihak-ketiga">
+      <h2 id="pihak-ketiga">6. Teknologi dan penyedia layanan</h2>
+      <p>
+        EGZ studio menggunakan MediaPipe untuk mendukung fitur pelacakan
+        interaktif. Berkas model dan komponen pendukungnya disajikan melalui
+        situs ini, dengan hak dan ketentuan perangkat lunak pihak ketiga yang
+        berlaku secara terpisah.
+      </p>
+      <p>
+        Layanan akun dan penyimpanan cloud didukung oleh Supabase. Infrastruktur
+        penyimpanan utama yang digunakan proyek ini berada di Singapura.
+        Penyedia infrastruktur dan layanan pendukung dapat memproses informasi
+        teknis sesuai perannya dan ketentuan layanan masing-masing.
+      </p>
+      <p>
+        Cookie atau mekanisme sesi yang diperlukan dapat digunakan untuk
+        menjaga status login. Penyedia hosting juga dapat mencatat informasi
+        koneksi dan permintaan situs untuk kebutuhan operasional serta keamanan.
+      </p>
+    </section>
+
+    <section aria-labelledby="hak">
+      <h2 id="hak">7. Pilihan dan hak Anda</h2>
+      <p>
+        Anda dapat mengatur izin kamera melalui browser, mengelola persetujuan
+        cloud melalui pengaturan Akun, serta menghapus foto lokal atau cloud
+        menggunakan fitur yang tersedia. Anda juga dapat mengajukan
+        permintaan terkait akses, koreksi, atau penghapusan data pribadi
+        sesuai ketentuan hukum yang berlaku.
+      </p>
+      <p>
+        Jika Anda menggunakan perangkat bersama, keluar dari akun dan hapus
+        foto lokal yang tidak ingin ditinggalkan di browser.
+      </p>
+    </section>
+
+    <section aria-labelledby="perubahan">
+      <h2 id="perubahan">8. Perubahan kebijakan</h2>
+      <p>
+        Kebijakan ini dapat diperbarui apabila terdapat perubahan fitur,
+        penggunaan data, atau ketentuan yang berlaku. Tanggal pembaruan
+        akan dicantumkan pada halaman ini, dan perubahan yang memengaruhi
+        pilihan privasi pengguna akan diinformasikan melalui layanan
+        sebagaimana diperlukan.
+      </p>
+    </section>
+
+    <section aria-labelledby="kontak">
+      <h2 id="kontak">9. Pengelola dan kontak privasi</h2>
+      <p><strong>Pengelola layanan:</strong>
+        <a href="https://github.com/EGYYFZA">EGYYFZA</a></p>
+      <p>
+        Gunakan kanal tersebut untuk pertanyaan mengenai kebijakan ini atau
+        permintaan terkait data pribadi Anda.
+      </p>
+    </section>
+
+    <section aria-labelledby="lisensi">
+      <h2 id="lisensi">10. Lisensi dan perangkat lunak pihak ketiga</h2>
+      <p>
+        Kode proyek EGZ studio tersedia dengan
+        <a href="LICENSE">lisensi MIT</a>. Informasi lisensi komponen
+        pendukung dapat dilihat pada
+        <a href="THIRD_PARTY.md">atribusi pihak ketiga</a> dan
+        <a href="licenses/Apache-2.0.txt">lisensi Apache 2.0</a>.
+        Lisensi kode perangkat lunak tidak memberikan hak kepemilikan atau
+        penggunaan atas foto pengguna maupun merek milik pihak lain.
+      </p>
+    </section>
+  </main>
+</body>
+</html>
