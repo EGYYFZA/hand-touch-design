@@ -1,6 +1,6 @@
 # EGZ / Gesture Studio
 
-Studio kamera dengan kontrol tangan. Versi web memakai dasar putih dengan aksen festival yang terinspirasi GitHub Universe 2026 dan memproses video di perangkat. Layout dan alur studio tetap satu layar. Kamera memenuhi viewport dengan proporsi asli (tepi dipotong bila perlu), dan ekspor mengikuti potongan yang terlihat. Foto web disimpan lokal pada browser melalui IndexedDB; versi desktop menyimpan ke `captures/`. Token warna bersama berada pada `web/theme.css`; [referensi desain](docs/universe-theme.md) mencatat sumber dan adaptasinya.
+Studio kamera dengan kontrol tangan. Memproses akses kameraa di perangkat. Layout dan alur studio tetap satu layar. Kamera memenuhi viewport dengan proporsi asli (tepi dipotong bila perlu), dan ekspor mengikuti potongan yang terlihat. Foto web disimpan lokal pada browser melalui IndexedDB; versi desktop menyimpan ke `captures/`. Token warna bersama berada pada `web/theme.css`; [referensi desain](docs/universe-theme.md) mencatat sumber dan adaptasinya.
 
 ## Versi browser, Print, dan Vercel
 
