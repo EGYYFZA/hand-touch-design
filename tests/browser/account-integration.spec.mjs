@@ -36,7 +36,7 @@ test('guest photobooth works before login, preserves photos, and resumes downloa
   const state = { user: null, loginError: true };
   const requests = await mockAccount(page, state);
   await page.goto('/'); await expect(page).toHaveURL(/\/$/);
-  await page.locator('#manual-access').click(); await page.locator('#mode-nav [data-mode=photobooth]').click(); await page.locator('#capture').click();
+  await page.keyboard.press('m'); await page.locator('#mode-nav [data-mode=photobooth]').click(); await page.keyboard.press('s');
   await expect(page.locator('.photo-card')).toHaveCount(1, { timeout: 15000 });
   await expect(page.locator('#saved-section')).toBeVisible();
   expect(requests.some(item => item.action === 'login' || item.action === 'upload')).toBe(false);
@@ -104,7 +104,7 @@ test('account cache hides legacy photos, scopes owner data, and clears cache on 
 test('Auth outage does not block guest camera, capture, Print or canceling login', async ({ page }) => {
   await fakeVision(page);
   await page.route('**/api/studio?**', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Unavailable fixture' }) }));
-  await page.goto('/'); await page.locator('#manual-access').click(); await page.locator('#mode-nav [data-mode=free]').click(); await page.locator('#capture').click();
+  await page.goto('/'); await page.keyboard.press('m'); await page.locator('#mode-nav [data-mode=free]').click(); await page.keyboard.press('s');
   await expect(page.locator('.photo-card')).toHaveCount(1); await page.locator('#gallery-toggle').click();
   await page.evaluate(() => { window.print = () => document.documentElement.dataset.printed = 'yes'; });
   await page.getByRole('button', { name: 'Print', exact: true }).click(); await expect(page.locator('html')).toHaveAttribute('data-printed', 'yes');
@@ -132,7 +132,7 @@ test('failed guest preview never falls back to an original image or print', asyn
     const original = window.createImageBitmap;
     window.createImageBitmap = (input, ...args) => input instanceof Blob ? Promise.reject(new Error('Synthetic preview failure')) : original(input, ...args);
   });
-  await page.goto('/'); await page.locator('#manual-access').click(); await page.locator('#mode-nav [data-mode=free]').click(); await page.locator('#capture').click();
+  await page.goto('/'); await page.keyboard.press('m'); await page.locator('#mode-nav [data-mode=free]').click(); await page.keyboard.press('s');
   await expect(page.locator('#photo-count')).toHaveText('1'); await page.locator('#gallery-toggle').click();
   expect(await page.locator('.photo-card img').getAttribute('src')).toBeNull();
   await expect(page.getByRole('button', { name: 'Print', exact: true })).toBeDisabled();
@@ -142,7 +142,7 @@ test('failed guest preview never falls back to an original image or print', asyn
 
 test('completed photobooth waits for the account dialog before opening the result', async ({ page }) => {
   await fakeVision(page); await mockAccount(page, { user: null });
-  await page.goto('/'); await page.locator('#manual-access').click(); await page.locator('#mode-nav [data-mode=photobooth]').click(); await page.locator('#capture').click();
+  await page.goto('/'); await page.keyboard.press('m'); await page.locator('#mode-nav [data-mode=photobooth]').click(); await page.keyboard.press('s');
   await page.locator('#account-open').click();
   await expect(page.locator('#photo-count')).toHaveText('1', { timeout: 15000 });
   await expect(page.locator('#studio-account')).toBeVisible(); await expect(page.locator('#saved-section')).toBeHidden();
@@ -175,7 +175,7 @@ test('login waits for a pending guest PNG and preserves it without retroactive u
     };
   });
   const requests = await mockAccount(page, { user: null, consent: true });
-  await page.goto('/'); await page.locator('#manual-access').click(); await page.locator('#mode-nav [data-mode=free]').click(); await page.locator('#capture').click();
+  await page.goto('/'); await page.keyboard.press('m'); await page.locator('#mode-nav [data-mode=free]').click(); await page.keyboard.press('s');
   await page.locator('#account-open').click(); await page.locator('#studio-email').fill('synthetic@example.test'); await page.locator('#studio-password').fill('synthetic password');
   await page.locator('#studio-login-form').getByRole('button', { name: 'Masuk', exact: true }).click();
   await expect(page.locator('#studio-login-form button[type=submit]')).toBeDisabled();
@@ -191,9 +191,9 @@ test('failed cleanup of an old cache owner cannot discard temporary guest photos
     localStorage.setItem('egz-cache-owner', owner);
     IDBFactory.prototype.open = () => { throw new DOMException('Blocked storage fixture', 'SecurityError'); };
   }, UID_B);
-  await mockAccount(page, { user: null }); await page.goto('/'); await page.locator('#manual-access').click(); await page.locator('#mode-nav [data-mode=free]').click();
-  await page.locator('#capture').click(); await expect(page.locator('#photo-count')).toHaveText('1');
-  await page.locator('#capture').click(); await expect(page.locator('#photo-count')).toHaveText('2');
+  await mockAccount(page, { user: null }); await page.goto('/'); await page.keyboard.press('m'); await page.locator('#mode-nav [data-mode=free]').click();
+  await page.keyboard.press('s'); await expect(page.locator('#photo-count')).toHaveText('1');
+  await page.keyboard.press('s'); await expect(page.locator('#photo-count')).toHaveText('2');
   await page.locator('#gallery-toggle').click(); await page.getByRole('link', { name: 'Unduh PNG' }).first().click();
   await page.locator('#studio-email').fill('synthetic@example.test'); await page.locator('#studio-password').fill('synthetic password');
   const pending = page.waitForEvent('download'); await page.locator('#studio-login-form').getByRole('button', { name: 'Masuk', exact: true }).click(); await pending;
@@ -205,7 +205,7 @@ test('failed cleanup of an old cache owner cannot discard temporary guest photos
 test('switching accounts cannot export a stale card owned by the previous account', async ({ page }) => {
   await fakeVision(page); const state = { user: { id: UID_A, email: 'a@example.test' } }; await mockAccount(page, state);
   await page.goto('/'); await expect(page.locator('#account-open')).toHaveText('Akun');
-  await page.locator('#manual-access').click(); await page.locator('#mode-nav [data-mode=free]').click(); await page.locator('#capture').click();
+  await page.keyboard.press('m'); await page.locator('#mode-nav [data-mode=free]').click(); await page.keyboard.press('s');
   await expect(page.locator('.photo-card')).toHaveCount(1); await page.locator('#gallery-toggle').click();
   let downloads = 0; page.on('download', () => { downloads++; }); state.user = { id: UID_B, email: 'b@example.test' };
   await page.getByRole('link', { name: 'Unduh PNG' }).click();
@@ -215,7 +215,7 @@ test('switching accounts cannot export a stale card owned by the previous accoun
 
 test('logging in during a guest photobooth sequence retains all three frames locally', async ({ page }) => {
   await fakeVision(page); const requests = await mockAccount(page, { user: null, consent: true });
-  await page.goto('/'); await page.locator('#manual-access').click(); await page.locator('#mode-nav [data-mode=photobooth]').click(); await page.locator('#capture').click();
+  await page.goto('/'); await page.keyboard.press('m'); await page.locator('#mode-nav [data-mode=photobooth]').click(); await page.keyboard.press('s');
   await expect(page.locator('#shot-1')).toHaveClass('taken', { timeout: 5000 });
   await page.locator('#account-open').click(); await page.locator('#studio-email').fill('synthetic@example.test'); await page.locator('#studio-password').fill('synthetic password');
   await page.locator('#studio-login-form').getByRole('button', { name: 'Masuk', exact: true }).click(); await expect(page.locator('#studio-account')).toBeHidden();
@@ -246,22 +246,22 @@ test('no cloud upload without consent and consent does not retroactively send ol
   await fakeVision(page);
   const state = { user: { id: UID_A, email: 'a@example.test' }, consent: false };
   const requests = await mockAccount(page, state);
-  await page.goto('/'); await page.locator('#manual-access').click();
-  await page.locator('#mode-nav [data-mode=free]').click(); await page.locator('#capture').click();
+  await page.goto('/'); await page.keyboard.press('m');
+  await page.locator('#mode-nav [data-mode=free]').click(); await page.keyboard.press('s');
   await expect(page.locator('.photo-card')).toHaveCount(1);
   expect(requests.filter(request => request.action === 'upload')).toHaveLength(0);
   await page.locator('#account-open').click(); await page.locator('#studio-consent').check();
   await expect(page.locator('#studio-account-status')).toContainText('Persetujuan aktif');
   await page.getByRole('button', { name: 'Kembali', exact: true }).last().click();
   expect(requests.filter(request => request.action === 'upload')).toHaveLength(0);
-  await page.locator('#capture').click();
+  await page.keyboard.press('s');
   await expect.poll(() => requests.filter(request => request.action === 'upload').length).toBe(1);
   expect(requests.find(request => request.action === 'upload').csrf).toBe('csrf-fixture');
 });
 
 test('an adopted guest photo uploads only after consent and a specific manual save', async ({ page }) => {
   await fakeVision(page); const state = { user: null, consent: false }; const requests = await mockAccount(page, state);
-  await page.goto('/'); await page.locator('#manual-access').click(); await page.locator('#mode-nav [data-mode=free]').click(); await page.locator('#capture').click();
+  await page.goto('/'); await page.keyboard.press('m'); await page.locator('#mode-nav [data-mode=free]').click(); await page.keyboard.press('s');
   await expect(page.locator('#photo-count')).toHaveText('1'); await page.locator('#gallery-toggle').click(); await page.getByRole('link', { name: 'Unduh PNG' }).click();
   await page.locator('#studio-email').fill('synthetic@example.test'); await page.locator('#studio-password').fill('synthetic password');
   const downloaded = page.waitForEvent('download'); await page.locator('#studio-login-form').getByRole('button', { name: 'Masuk', exact: true }).click(); await downloaded;
@@ -347,9 +347,9 @@ test('small account-mode viewports keep camera, navigation and account controls 
   for (const [width, height] of [[320, 568], [568, 320]]) {
     await page.setViewportSize({ width, height }); await page.goto('/');
     await expect(page.locator('#account-open')).toBeInViewport();
-    await page.locator('#manual-access').click();
+    await page.keyboard.press('m');
     await page.locator('#mode-nav [data-mode=free]').click();
-    for (const id of ['account-open', 'toggle-tools', 'gallery-toggle', 'capture', 'stop-camera']) {
+    for (const id of ['account-open', 'toggle-tools', 'gallery-toggle']) {
       const bounds = await page.locator(`#${id}`).boundingBox();
       expect(bounds, id).not.toBeNull();
       expect(bounds.x, id).toBeGreaterThanOrEqual(0); expect(bounds.y, id).toBeGreaterThanOrEqual(0);

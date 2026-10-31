@@ -123,7 +123,7 @@ test('meme shows original monkey image only after matching face and hand, then c
 
 test('gesture uses an in-page confirmation to delete and can cancel it', async ({ page }) => {
   await calibrate(page); await mode(page,'free');
-  await pointAt(page,'#capture'); await expect(page.locator('.photo-card')).toHaveCount(1);
+  await page.keyboard.press('s'); await expect(page.locator('.photo-card')).toHaveCount(1);
   await pointAt(page,'#gallery-toggle'); await expect(page.locator('#saved-section')).toBeVisible();
   await pointAt(page,'.photo-card button:text-is("Hapus")'); await expect(page.getByRole('button',{name:'Ya, hapus'})).toBeVisible();
   await pointAt(page,'.photo-card button:text-is("Batal hapus")'); await expect(page.getByRole('button',{name:'Ya, hapus'})).toBeHidden();
@@ -132,7 +132,7 @@ test('gesture uses an in-page confirmation to delete and can cancel it', async (
 });
 
 test('pinch paints with either hand; open fingers and a relaxed fist erase without a joining stroke', async ({ page }) => {
-  await setup(page); await page.locator('#manual-access').click(); await page.locator('#mode-nav [data-mode=painting]').click();
+  await setup(page); await page.keyboard.press('m'); await page.locator('#mode-nav [data-mode=painting]').click();
   // The manual pointer eraser must not change the pinch gesture's meaning.
   await page.locator('#eraser').click();
   const pinch = hand('pinch', .5, .5), other = hand('peace', .8, .45);
@@ -157,7 +157,7 @@ test('mosaic clips to the fingertip polygon and leaves the bounding-box corners 
       const stream = source.captureStream(30); setInterval(() => context.fillRect(0, 0, 1, 1), 30); return stream;
     };
   });
-  await page.goto('/'); await page.locator('#manual-access').click(); await page.locator('#mode-nav [data-mode=free]').click();
+  await page.goto('/'); await page.keyboard.press('m'); await page.locator('#mode-nav [data-mode=free]').click();
   await page.locator('#video').evaluate(video => video.readyState >= 2 || new Promise(resolve => video.addEventListener('loadeddata', resolve, { once: true })));
   await page.waitForTimeout(150);
   await page.locator('#preview').evaluate(canvas => { window.beforePolygon = new Uint8ClampedArray(canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data); });

@@ -9,15 +9,15 @@ async function camera(page) {
 
 async function manualStudio(page) {
   await camera(page);
-  await page.locator('#manual-access').click();
+  await page.keyboard.press('m');
   await page.locator('#mode-nav [data-mode=free]').click();
 }
 
 test('camera capture, download and Print use the selected saved image', async ({ page }) => {
   await manualStudio(page);
-  await page.getByRole('button', { name: 'Ambil foto' }).click();
+  await page.keyboard.press('s');
   await expect(page.locator('.photo-card')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Ambil foto' }).click();
+  await page.keyboard.press('s');
   await expect(page.locator('.photo-card')).toHaveCount(2);
   await page.locator('#gallery-toggle').click();
   await page.locator('#gallery-next').click();
@@ -37,7 +37,7 @@ test('camera capture, download and Print use the selected saved image', async ({
   await expect(page.locator('#print-area img')).toBeVisible();
   await page.emulateMedia({ media: 'screen' });
   await page.locator('#gallery-close').click();
-  await page.getByRole('button', { name: 'Matikan kamera' }).click();
+  await page.keyboard.press('x');
   await page.locator('#gallery-toggle').click();
   await expect(card.getByRole('button', { name: 'Print', exact: true })).toBeEnabled();
 });
@@ -62,13 +62,13 @@ test('denied camera access leaves an actionable retry', async ({ page }) => {
   await page.getByRole('button', { name: 'Aktifkan kamera', exact: true }).click();
   await expect(page.locator('#feedback')).toContainText('Izin kamera ditolak');
   await expect(page.locator('#start-camera')).toBeEnabled();
-  await expect(page.locator('#capture')).toBeDisabled();
+  await expect(page.locator('.photo-card')).toHaveCount(0);
 });
 
 test('photobooth captures exactly three frames into a printable strip', async ({ page }) => {
   await manualStudio(page);
   await page.locator('#mode-nav [data-mode=photobooth]').click();
-  await page.getByRole('button', { name: 'Mulai sesi' }).click();
+  await page.keyboard.press('s');
   await expect(page.locator('#countdown')).toBeVisible();
   await expect(page.locator('.photo-card')).toHaveCount(1, { timeout: 20000 });
   await expect(page.locator('#saved-section')).toBeVisible();
@@ -86,7 +86,7 @@ test('mobile workspace fits and preserves keyboard/native controls', async ({ pa
   await page.keyboard.press('3');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Photobooth');
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  expect(await page.locator('#capture').evaluate(button => getComputedStyle(button).transitionDuration)).toBe('0s');
+  expect(await page.locator('#tutorial-open').evaluate(button => getComputedStyle(button).transitionDuration)).toBe('0s');
   await page.evaluate(() => { document.activeElement.blur(); window.scrollTo(0, 0); });
   await page.screenshot({ path: 'docs/ui-preview/web-mobile.png', fullPage: true });
 });

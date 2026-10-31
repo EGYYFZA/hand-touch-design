@@ -42,7 +42,8 @@ try {
       }); }
     };
   });
-  await page.goto(url); await page.locator('#manual-access').click();
+  await page.addInitScript(() => localStorage.setItem('egz-tutorial-auto-v1', 'off'));
+  await page.goto(url); await page.keyboard.press('m');
   await page.locator('#mode-nav [data-mode=free]').click();
   await page.waitForFunction(()=>window.visionSamples.filter(s=>s.mode==='free').length>=40,null,{timeout:45000});
   await page.locator('#mode-nav [data-mode=meme]').click();

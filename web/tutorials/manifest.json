@@ -1,0 +1,36 @@
+{
+  "generator": "Remotion 4.0.539 / ThreeCanvas",
+  "dimensions": [
+    960,
+    540
+  ],
+  "fps": 20,
+  "audio": false,
+  "clips": {
+    "menu": {
+      "bytes": 78125,
+      "sha256": "1d9de465f687f76530bce6ae6e7b6713e0245455edc6cd44349e3b5f3046e862",
+      "seconds": 12
+    },
+    "free": {
+      "bytes": 171766,
+      "sha256": "ab7e62112ce5777912bc9403889a62f8f59da38a7a456b99ed4a7dd6fd6e6f4f",
+      "seconds": 12
+    },
+    "painting": {
+      "bytes": 126337,
+      "sha256": "ab9a1ba48c181d84a8418701895c0d5aa667c2403f579fa5fa1dccad578b90e3",
+      "seconds": 12
+    },
+    "photobooth": {
+      "bytes": 84531,
+      "sha256": "16b62e132572c2b2798c814514b9340e5c5cca700976a4b6c59576f2df7518e6",
+      "seconds": 12
+    },
+    "meme": {
+      "bytes": 66435,
+      "sha256": "aa18a2cb008c4a0125c8264fb2eceded4e2a183b4ec13a9f59fb4be7e02af78c",
+      "seconds": 12
+    }
+  }
+}

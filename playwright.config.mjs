@@ -3,6 +3,8 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: './tests/browser', timeout: 60000, workers: 1,
   use: { baseURL: 'http://127.0.0.1:4174', browserName: 'chromium',
+    // Established workflows use the opt-out preference. Tutorial specs start fresh.
+    storageState: { cookies: [], origins: [{ origin: 'http://127.0.0.1:4174', localStorage: [{ name: 'egz-tutorial-auto-v1', value: 'off' }] }] },
     viewport: { width: 1440, height: 1000 }, permissions: ['camera'],
     launchOptions: { args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--enable-unsafe-swiftshader'] },
     screenshot: 'only-on-failure', trace: 'retain-on-failure' },

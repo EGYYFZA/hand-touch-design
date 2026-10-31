@@ -12,6 +12,8 @@ const publicFiles = ['index.html', 'privacy.html', 'theme.css', 'styles.css', 'm
   'gestures.js', 'vision-worker.js', 'photo-store.js', 'photo-preview.js', 'device-profile.js',
   'cloud-client.js', 'account.html', 'account.js', 'account.css', 'admin.html',
   'cloud-gallery.html', 'cloud-gallery.js', 'cloud-viewer.js', 'studio-cloud.js', 'studio-cloud.css',
+  'tutorials.js', 'tutorials.css', 'tutorial-catalog.js',
+  ...['menu', 'free', 'painting', 'photobooth', 'meme'].flatMap(mode => ['mp4', 'jpg', 'vtt'].map(extension => `tutorials/${mode}.${extension}`)),
   ...['clingy', 'idea', 'shock', 'tongue'].map(name => `memes/${name}.webp`)];
 for (const name of publicFiles) {
   await mkdir(resolve(output, name, '..'), { recursive: true });

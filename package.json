@@ -10,6 +10,7 @@
   },
   "scripts": {
     "build": "node tools/build-web.mjs",
+    "tutorials:render": "node tools/tutorial-video/render.mjs",
     "dev": "npm run build && node tools/serve-web.mjs",
     "test": "node --test tests/web/*.test.mjs",
     "test:e2e": "playwright test",
