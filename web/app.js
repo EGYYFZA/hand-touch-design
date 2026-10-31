@@ -3,6 +3,7 @@ import { listPhotos, storePhoto, deletePhoto, MAX_PHOTOS } from './photo-store.j
 import { deviceProfile } from './device-profile.js';
 import { createPhotoStrip } from './photo-strip.js';
 import { createGuestPreview } from './photo-preview.js';
+import { initializeTutorials } from './tutorials.js';
 import { initializeCloud, canUseStudio, cloudIdentity, sameCloudIdentity, preparePhotoCloud, captureConsent, authorizePhotoExport, needsGuestPreview } from './studio-cloud.js';
 
 const $ = id => document.getElementById(id);
@@ -32,6 +33,11 @@ let spatialPoint = null, lastActivationPoint = null;
 let keyboardDrawing = false;
 let saving = false, pendingSave = null;
 let cursorTarget = null, cursorFrameAt = 0, paintPoint = null, paintPointAt = 0, galleryIndex = 0;
+const tutorialUI = initializeTutorials({
+  canOpen: () => !session && !pendingSave && !saving,
+  notice: feedback, beforeOpen: resetCursor,
+  afterClose() { resetCursor(); fistSince = null; if (mode === 'photobooth') fistArmed = false; },
+});
 const memeImages = Object.fromEntries(['clingy', 'idea', 'shock', 'tongue'].map(name => {
   const image = new Image(); image.src = `memes/${name}.webp`;
   image.onerror = () => feedback(`Aset ${name} gagal dimuat. Muat ulang halaman untuk mencoba lagi.`, true);
@@ -42,10 +48,11 @@ function enterStudio() {
   if (!live || (!manual && calibrationStep !== 'point')) return;
   phase = 'menu'; document.body.dataset.phase = phase;
   $('calibration').hidden = true; $('mode-tools').hidden = false;
-  $('mode-nav').inert = false; $('menu-screen').hidden = false; $('capture').disabled = true;
+  $('mode-nav').inert = false; $('menu-screen').hidden = false;
   $('mode-title').textContent = 'Pilih mode';
   $('mode-title').tabIndex = -1; $('mode-title').focus({ preventScroll: true });
   feedback('');
+  tutorialUI.enterMenu();
 }
 
 function resetCursor() {
@@ -85,7 +92,7 @@ function gestureControls(now) {
   const cursor = $('gesture-cursor'); cursor.hidden = false; cursor.style.left = `${cursorPoint.x}px`; cursor.style.top = `${cursorPoint.y}px`;
   const hit = document.elementFromPoint(cursorPoint.x, cursorPoint.y);
   let target = hit?.closest('button, a[download], input[type=range], #color-field');
-  if (target?.disabled || target?.closest('[inert]') || (phase === 'setup' && target?.id !== 'enter-studio')) target = null;
+  if (target?.disabled || target?.closest('[inert]') || (phase === 'setup' && !target?.closest('#tutorial-dialog') && target?.id !== 'enter-studio')) target = null;
   // A new control appearing under a held finger must not activate by itself.
   if (lastActivationPoint && distance(cursorPoint, lastActivationPoint) < 20) target = null;
   else lastActivationPoint = null;
@@ -172,9 +179,10 @@ function resize(width, height) {
 function chooseMode(next) {
   if (phase === 'setup' || !titles[next]) return;
   if (session && next !== mode) { feedback('Selesaikan atau batalkan sesi foto sebelum pindah mode.', true); return; }
+  const changed = phase !== 'studio' || mode !== next;
   phase = 'studio'; document.body.dataset.phase = phase; document.body.dataset.mode = next;
   keyboardDrawing = false;
-  $('menu-screen').hidden = true; $('capture').disabled = !live || !!session || !!pendingSave;
+  $('menu-screen').hidden = true;
   mode = next; lastPaint = null; pointerDown = false; latch = new MemeLatch(); renderMeme = null;
   draftShape = null; gesturePaintActive = false; fistSince = null; fistArmed = true; face = null; shapes = {}; showMeme(null);
   $('mode-title').textContent = titles[mode];
@@ -186,10 +194,9 @@ function chooseMode(next) {
   $('booth-tools').hidden = mode !== 'photobooth';
   $('toggle-tools').hidden = false; $('tools-title').textContent = titles[mode];
   setToolsOpen(toolsOpen, { animate: false });
-  $('capture').replaceChildren(document.createTextNode(mode === 'photobooth' ? 'Mulai sesi ' : 'Ambil foto '));
-  const key = document.createElement('kbd'); key.textContent = mode === 'photobooth' ? 'Spasi' : 'S'; $('capture').append(key);
   $('mode-title').focus({ preventScroll: true });
   feedback('');
+  if (changed) tutorialUI.modeChanged(mode);
 }
 
 function startVision() {
@@ -257,7 +264,7 @@ async function startCamera() {
     resize(video.videoWidth, video.videoHeight);
     live = true; lastFreshAt = performance.now(); lastVideoTime = -1;
     next.getVideoTracks()[0].addEventListener('ended', () => { if (stream === next) stopCamera('Kamera terputus. Sambungkan kembali lalu aktifkan kamera.'); });
-    $('empty-state').hidden = true; $('capture').disabled = phase !== 'studio' || !!session || !!pendingSave; $('stop-camera').disabled = false;
+    $('empty-state').hidden = true;
     $('camera-state').textContent = 'KAMERA AKTIF'; $('camera-state').className = 'badge live';
     $('tracking-state').textContent = 'Menyiapkan model gestur...';
     if (session?.paused) { session.nextAt = performance.now() + session.remaining; session.paused = false; }
@@ -284,6 +291,7 @@ async function startCamera() {
 }
 
 function stopCamera(message = 'Kamera dimatikan. Foto tersimpan di Hasil.') {
+  tutorialUI.close();
   ++generation; live = false; starting = false;
   if (session && !session.paused) { session.remaining = Math.max(0, session.nextAt - performance.now()); session.paused = true; }
   const previous = stream; stream = null;
@@ -295,7 +303,7 @@ function stopCamera(message = 'Kamera dimatikan. Foto tersimpan di Hasil.') {
   ctx.clearRect(0, 0, preview.width, preview.height);
   $('empty-state').hidden = false; $('camera-message').textContent = message;
   $('camera-state').textContent = 'KAMERA TIDAK AKTIF'; $('camera-state').className = 'badge';
-  $('capture').disabled = true; $('stop-camera').disabled = true; $('countdown').hidden = true;
+  $('countdown').hidden = true;
   $('tracking-state').textContent = session ? 'Sesi foto dijeda. Aktifkan kamera untuk melanjutkan.' : 'Kamera tidak aktif.';
   feedback(message);
 }
@@ -382,11 +390,11 @@ function beginSession() {
   if (photos.length >= MAX_PHOTOS) { feedback('Galeri penuh. Unduh dan hapus beberapa foto sebelum mengambil lagi.', true); return; }
   session = { shots: [], nextAt: performance.now() + 3000, paused: false, remaining: 3000, cloudConsentAtCapture: captureConsent(), ownerId: cloudIdentity().ownerId };
   for (const item of document.querySelectorAll('.shot-list li')) item.classList.remove('taken');
-  $('cancel-session').hidden = false; $('capture').disabled = true; feedback('Sesi dimulai. Tiga foto akan diambil.');
+  feedback('Sesi dimulai. Tiga foto akan diambil.');
 }
 
 function cancelSession() {
-  session = null; $('countdown').hidden = true; $('cancel-session').hidden = true; $('capture').disabled = !live;
+  session = null; $('countdown').hidden = true;
   feedback('Sesi dibatalkan. Foto tersimpan sebelumnya tetap tersedia.');
   $('shutter').hidden = true; $('shot-feedback').hidden = true;
 }
@@ -429,7 +437,7 @@ async function savePhoto(canvas, kind = mode, consentOverride = undefined) {
   if (saving || (pendingSave && pendingSave.canvas !== canvas)) return;
   if (photos.length >= MAX_PHOTOS) { feedback('Galeri penuh. Unduh dan hapus beberapa foto sebelum mengambil lagi.', true); return; }
   const consentAtCapture = pendingSave?.cloudConsentAtCapture ?? consentOverride ?? captureConsent();
-  saving = true; pendingSave = { canvas, kind, cloudConsentAtCapture: consentAtCapture }; $('capture').disabled = true; $('retry-save').disabled = true;
+  saving = true; pendingSave = { canvas, kind, cloudConsentAtCapture: consentAtCapture };
   const identity = cloudIdentity();
   try {
     const blob = await new Promise((resolve, reject) => {
@@ -449,10 +457,9 @@ async function savePhoto(canvas, kind = mode, consentOverride = undefined) {
     if (kind === 'photobooth') openGallery();
     feedback(persisted ? 'Foto tersimpan di browser perangkat ini. Unduh PNG untuk salinan berkas.' : 'Penyimpanan browser gagal atau penuh. Foto hanya sementara; unduh PNG sebelum menutup halaman.', !persisted);
   } catch {
-    feedback('Foto gagal diproses. Gambar tetap disimpan sementara; pilih Coba simpan foto.', true);
+    feedback('Foto gagal diproses. Gambar tetap tersimpan sementara; tekan R untuk mencoba lagi.', true);
   } finally {
-    saving = false; $('retry-save').hidden = !pendingSave; $('retry-save').disabled = false;
-    $('capture').disabled = !canUseStudio() || !live || phase !== 'studio' || !!session || !!pendingSave;
+    saving = false;
   }
 }
 
@@ -549,6 +556,8 @@ async function performPrint(entry) {
 
 async function capture() {
   if (!canUseStudio()) return;
+  if (saving || session || document.querySelector('dialog[open]')) return;
+  if (pendingSave) { await savePhoto(pendingSave.canvas, pendingSave.kind); return; }
   if (phase !== 'studio') return;
   if (!live || performance.now() - lastFreshAt > 1000) { feedback('Kamera belum siap. Aktifkan kamera lalu coba lagi.', true); return; }
   if (mode === 'photobooth') beginSession();
@@ -598,7 +607,7 @@ function render(now) {
       $(`shot-${number}`).classList.add('taken');
       if (session.shots.length === 3) {
         const strip = createPhotoStrip(session.shots), consent = session.cloudConsentAtCapture && session.ownerId === cloudIdentity().ownerId;
-        session = null; $('countdown').hidden = true; $('cancel-session').hidden = true; $('capture').disabled = false;
+        session = null; $('countdown').hidden = true;
         savePhoto(strip, 'photobooth', consent);
       } else session.nextAt = now + 3000;
     }
@@ -613,11 +622,8 @@ function render(now) {
 }
 
 document.querySelectorAll('button[data-mode]').forEach(button => button.addEventListener('click', () => chooseMode(button.dataset.mode)));
-$('start-camera').addEventListener('click', startCamera); $('stop-camera').addEventListener('click', () => stopCamera());
+$('start-camera').addEventListener('click', startCamera);
 $('enter-studio').addEventListener('click', enterStudio);
-$('manual-access').addEventListener('click', () => { manual = true; if (live) enterStudio(); else startCamera(); });
-$('capture').addEventListener('click', capture); $('cancel-session').addEventListener('click', cancelSession);
-$('retry-save').addEventListener('click', () => { if (pendingSave) savePhoto(pendingSave.canvas, pendingSave.kind); });
 $('clear-paint').addEventListener('click', () => { paintCtx.clearRect(0, 0, paint.width, paint.height); paintDirty = false; lastPaint = null; draftShape = null; });
 $('eraser').addEventListener('click', () => {
   erasing = !erasing; paintTool = 'brush'; draftShape = null;
@@ -737,7 +743,10 @@ document.addEventListener('keydown', event => {
   if (document.querySelector('dialog[open]')) return;
   if (event.ctrlKey || event.metaKey || event.altKey || /INPUT|SELECT|TEXTAREA/.test(event.target.tagName) || event.repeat) return;
   if (event.code === 'Space' && event.target.tagName === 'BUTTON') return;
-  if (/^[1-4]$/.test(event.key)) chooseMode(['free', 'painting', 'photobooth', 'meme'][Number(event.key) - 1]);
+  if (event.key.toLowerCase() === 'm' && !session && !pendingSave) { event.preventDefault(); manual = true; if (live) enterStudio(); else startCamera(); }
+  else if (event.key.toLowerCase() === 'x' && live) { event.preventDefault(); stopCamera(); }
+  else if (event.key.toLowerCase() === 'r' && pendingSave) { event.preventDefault(); savePhoto(pendingSave.canvas, pendingSave.kind); }
+  else if (/^[1-4]$/.test(event.key)) chooseMode(['free', 'painting', 'photobooth', 'meme'][Number(event.key) - 1]);
   else if (event.key.toLowerCase() === 's' || event.code === 'Space') { event.preventDefault(); capture(); }
   else if (event.key.toLowerCase() === 'p' && photos.length) { event.preventDefault(); printPhoto(photos.at(-1)); }
   else if (event.key === 'Escape' && session) cancelSession();
@@ -761,8 +770,7 @@ accountReady = initializeCloud({
     if ($('saved-section').open) $('saved-section').close();
     if (!claimGuest) paintCtx.clearRect(0, 0, paint.width, paint.height);
     lastPaint = null; gesturePaintActive = false; galleryLoading = true; showGalleryPhoto();
-    $('countdown').hidden = !session; $('cancel-session').hidden = !session;
-    $('capture').disabled = !live || phase !== 'studio' || !!session || !!pendingSave;
+    $('countdown').hidden = !session;
     return temporary;
   },
   restore: restoreGallery,

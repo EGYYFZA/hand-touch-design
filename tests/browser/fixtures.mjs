@@ -14,7 +14,8 @@
   return p;
 }
 
-export async function fakeVision(page) {
+export async function fakeVision(page, { tutorials = false } = {}) {
+  if (!tutorials) await page.addInitScript(() => localStorage.setItem('egz-tutorial-auto-v1', 'off'));
   await page.addInitScript(() => {
     window.visionFixture = { landmarks: [], face: null, shapes: [] };
     window.Worker = class {

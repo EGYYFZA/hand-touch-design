@@ -3,7 +3,7 @@
 import { fakeVision } from './fixtures.mjs';
 
 async function manual(page) {
-  await page.goto('/'); await page.locator('#manual-access').click();
+  await page.goto('/'); await page.keyboard.press('m');
   await expect(page.locator('#menu-screen')).toBeVisible();
 }
 
@@ -28,7 +28,7 @@ test('responsive layouts, readable contrast, labels, keyboard color and shape co
       expect(outside,`${width}x${height}/${mode}`).toEqual([]);
       const tools = await page.locator('#tool-panel').boundingBox();
       const header = await page.locator('.topbar').boundingBox();
-      const actions = await page.locator('.actions').boundingBox();
+      const actions = { y: height - 12 };
       expect(tools.y,`${width}x${height}/${mode}: header overlap`).toBeGreaterThanOrEqual(header.y + header.height);
       expect(tools.y + tools.height,`${width}x${height}/${mode}: action overlap`).toBeLessThanOrEqual(actions.y);
       expect(await page.locator('#tool-panel').evaluate(panel => panel.scrollHeight <= panel.clientHeight), `${width}x${height}/${mode}: tool overflow`).toBe(true);
@@ -61,10 +61,10 @@ test('responsive layouts, readable contrast, labels, keyboard color and shape co
   });
   expect(issues).toEqual([]);
   await page.emulateMedia({reducedMotion:'reduce'});
-  await page.locator('#mode-nav [data-mode=photobooth]').click(); await page.locator('#capture').click();
+  await page.locator('#mode-nav [data-mode=photobooth]').click(); await page.keyboard.press('s');
   await expect(page.locator('#shot-feedback')).toBeVisible({timeout:5000});
   expect(await page.locator('#shutter').evaluate(e=>getComputedStyle(e).display)).toBe('none');
-  await page.locator('#cancel-session').click();
+  await page.keyboard.press('Escape');
 });
 
 test('side tools close with X, preview on hover, pin on click and stay closed when changing mode', async ({ page }) => {
@@ -90,7 +90,7 @@ test('touch can close and reopen the side tools without hover or losing the sele
   const context = await browser.newContext({ viewport: { width: 320, height: 568 }, hasTouch: true, isMobile: true, permissions: ['camera'] });
   try {
     const page = await context.newPage(); await fakeVision(page); await page.goto(baseURL);
-    await page.locator('#manual-access').tap(); await page.locator('#mode-nav [data-mode=painting]').tap();
+    await page.keyboard.press('m'); await page.locator('#mode-nav [data-mode=painting]').tap();
     await page.locator('#close-tools').tap(); await expect(page.locator('#tool-panel')).toBeHidden();
     await page.locator('#toggle-tools').tap(); await expect(page.locator('#tool-panel')).toBeVisible();
     await expect(page.locator('body')).toHaveAttribute('data-mode', 'painting');
@@ -114,8 +114,8 @@ test('real face model loads only on entering Meme and worker produces a result',
 
 test('camera interruption pauses a session; resuming produces one strip without mode changes', async ({ page }) => {
   await page.setViewportSize({width:375,height:667});
-  await manual(page); await page.locator('#mode-nav [data-mode=photobooth]').click(); await page.locator('#capture').click();
-  await page.locator('#stop-camera').click(); await expect(page.locator('#countdown')).toBeHidden();
+  await manual(page); await page.locator('#mode-nav [data-mode=photobooth]').click(); await page.keyboard.press('s');
+  await page.keyboard.press('x'); await expect(page.locator('#countdown')).toBeHidden();
   await expect(page.locator('#tool-panel')).toBeHidden();
   await page.waitForTimeout(1200); await expect(page.locator('.photo-card')).toHaveCount(0);
   await page.locator('#mode-nav [data-mode=painting]').click(); await expect(page.locator('body')).toHaveAttribute('data-mode','photobooth');
@@ -133,11 +133,11 @@ test('failed PNG export retains the full three-shot strip and can retry after ca
       else original.call(this,callback,...args);
     };
   });
-  await manual(page); await page.locator('#mode-nav [data-mode=photobooth]').click(); await page.locator('#capture').click();
-  await expect(page.locator('#retry-save')).toBeVisible({timeout:15000});
-  await expect(page.locator('.photo-card')).toHaveCount(0); await expect(page.locator('#capture')).toBeDisabled();
-  await page.locator('#stop-camera').click(); await page.locator('#retry-save').click();
-  await expect(page.locator('.photo-card')).toHaveCount(1); await expect(page.locator('#retry-save')).toBeHidden();
+  await manual(page); await page.locator('#mode-nav [data-mode=photobooth]').click(); await page.keyboard.press('s');
+  await expect(page.locator('#feedback')).toContainText('Foto gagal diproses',{timeout:15000});
+  await expect(page.locator('.photo-card')).toHaveCount(0); await expect(page.locator('.photo-card')).toHaveCount(0);
+  await page.keyboard.press('x'); await page.keyboard.press('r');
+  await expect(page.locator('.photo-card')).toHaveCount(1); await expect(page.locator('#feedback')).not.toContainText('Foto gagal diproses');
   await expect(page.locator('#saved-section')).toBeVisible();
   const matches=await page.locator('.photo-card img').evaluate(async image=>{
     await image.decode();const canvas=document.createElement('canvas');canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;

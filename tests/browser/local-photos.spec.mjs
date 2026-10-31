@@ -2,9 +2,9 @@ import { test, expect } from '@playwright/test';
 
 async function takePhoto(page) {
   await page.goto('/');
-  await page.locator('#manual-access').click();
+  await page.keyboard.press('m');
   await page.locator('#mode-nav [data-mode=free]').click();
-  await page.locator('#capture').click();
+  await page.keyboard.press('s');
   await expect(page.locator('.photo-card')).toHaveCount(1);
 }
 

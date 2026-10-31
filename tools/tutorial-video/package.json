@@ -1,0 +1,17 @@
+{
+  "name": "egz-tutorial-videos",
+  "private": true,
+  "type": "module",
+  "scripts": { "render": "node render.mjs" },
+  "overrides": { "zod": "4.6.7" },
+  "devDependencies": {
+    "@react-three/fiber": "9.8.2",
+    "@remotion/bundler": "4.0.539",
+    "@remotion/renderer": "4.0.539",
+    "@remotion/three": "4.0.539",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.539",
+    "three": "0.186.1"
+  }
+}

@@ -15,10 +15,15 @@ try {
     if (!request.url().startsWith(origin) && !request.url().startsWith('blob:')) external.push(new URL(request.url()).hostname);
     if (request.url().includes('action=upload')) uploads.push(request.method());
   });
-  await page.goto(origin + '/'); await page.locator('#manual-access').click();
+  await page.goto(origin + '/'); await page.keyboard.press('m');
+  // Use the visible preference, preserving default onboarding for actual visitors.
+  if (await page.locator('#tutorial-dialog').isVisible()) {
+    await page.locator('#tutorial-auto').click(); await page.locator('#tutorial-skip').click();
+    check('tutorial can be skipped and automatic help disabled');
+  }
   await expect(page.locator('#tracking-state')).toContainText(/tangan|Gestur siap/, { timeout: 45000 });
   check('real MediaPipe worker and hand model load under deployed CSP');
-  await page.locator('#mode-nav [data-mode=photobooth]').click(); await page.locator('#capture').click();
+  await page.locator('#mode-nav [data-mode=photobooth]').click(); await page.keyboard.press('s');
   await expect(page.locator('#saved-section')).toBeVisible({ timeout: 25000 });
   check('guest photobooth automatically opens its completed three-shot result');
   const preview = await page.locator('.photo-card img').evaluate(async img => { await img.decode(); return { w: img.naturalWidth, h: img.naturalHeight, alt: img.alt, src: img.src }; });
