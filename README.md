@@ -60,7 +60,7 @@ terpisah. Lihat [THIRD_PARTY.md](THIRD_PARTY.md) dan [CONTRIBUTING.md](CONTRIBUT
 
 ## Menjalankan
 
-> **Wajib Python 3.9 – 3.12.** MediaPipe belum punya wheel untuk 3.13/3.14.
+> **Wajib Python 3.11 – 3.12.** Pillow yang ditambal memerlukan 3.11+; baseline MediaPipe/NumPy proyek ini memakai maksimal 3.12.
 > Kalau Python bawaan sistem Anda lebih baru, **jangan** pakai `python -m venv`
 > — itu akan membuat venv dengan versi yang salah, dan galat yang muncul
 > kemudian berbunyi soal numpy sehingga sebabnya sulit ditebak.
@@ -113,7 +113,7 @@ memakai klasifikasi berbasis aturan. Statusnya terlihat di rel menu
 
 | Gejala | Sebab dan jalan keluar |
 |---|---|
-| `Python 3.x tidak didukung MediaPipe` | Venv dibuat versi yang salah. Hapus `.venv`, ulangi langkah persiapan dengan `py -3.12`. |
+| `Python 3.x tidak didukung dependensi EGZ` | Venv dibuat versi yang salah. Ulangi langkah persiapan dengan `py -3.12`. |
 | `No module named 'numpy.core._multiarray_umath'` | Sama seperti di atas — isi venv tidak cocok dengan interpreternya. Bangun ulang venv. |
 | `kamera indeks 0 tidak bisa dibuka` | Kamera dipakai aplikasi lain, atau coba `--camera 1`. |
 | Layar hidup tapi tangan tidak pernah terdeteksi | **Cek penutup privasi kamera.** Kalau tertutup, frame masuk semua tapi isinya hitam dan tidak ada yang bisa dideteksi. |
