@@ -33,6 +33,24 @@ or user photographs.
   downloads retain their respective Chromium/FFmpeg notices and are not shipped
   in the static site.
 
+- Three.js 0.187.0: Three.js authors, MIT.
+  Source: https://github.com/mrdoob/three.js
+  Two unmodified browser ES modules are copied from the npm package
+  to `vendor/`; the upstream MIT text is published as `licenses/Three-MIT.txt`.
+  The landing mascot is original procedural artwork derived from the project's
+  existing spark illustration. Its poster is rendered from the same scene.
+  No remote model, texture, image-generation service or AI inference is used
+  by the public landing page.
+
+- The isolated tutorial renderer uses Three.js 0.186.1 (MIT), React and
+  React Three Fiber (MIT), and Remotion 4.0.539 under its own license:
+  https://github.com/remotion-dev/remotion/blob/v4.0.539/LICENSE.md
+  Remotion is not covered by this repository's MIT license; check its terms
+  for your organization before commercial rendering. These dependencies are
+  local authoring tools, not part of the tutorial player. The five rendered
+  tutorials reuse the original EGZ mascot and synthetic example portraits;
+  no user photographs or downloaded character models are used.
+
 Google's SDK privacy notice:
 https://developers.google.com/edge/mediapipe/solutions/tasks#mediapipe_tasks_privacy_notice
 

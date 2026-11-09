@@ -190,7 +190,8 @@ test('festive photobooth decorations preserve every pixel of all three original 
   await page.goto('/');
   const result = await page.evaluate(async () => {
     await document.fonts.ready;
-    const { createPhotoStrip } = await import('/photo-strip.js');
+    const { createPhotoStrip, preparePhotoStrip } = await import('/photo-strip.js');
+    if (!await preparePhotoStrip()) throw new Error('Local 3D frame assets must load');
     const shots = [0, 1, 2].map(shot => {
       const canvas = document.createElement('canvas'); canvas.width = 320; canvas.height = 180;
       const c = canvas.getContext('2d'), data = c.createImageData(320, 180);
@@ -200,11 +201,13 @@ test('festive photobooth decorations preserve every pixel of all three original 
     const strip = createPhotoStrip(shots), c = strip.getContext('2d');
     const differences = shots.map((shot, i) => {
       const original = shot.getContext('2d').getImageData(0, 0, 320, 180).data;
-      const framed = c.getImageData(18, 42 + i * 188, 320, 180).data;
+      const framed = c.getImageData(29, 96 + i * 199, 320, 180).data;
       return original.reduce((n, value, index) => n + (value !== framed[index] ? 1 : 0), 0);
     });
-    return { differences, width: strip.width, height: strip.height, corner: [...c.getImageData(0, 0, 1, 1).data], fontLoaded: document.fonts.check('16px "Mona Sans"') };
+    const edges = [c.getImageData(0, 0, strip.width, 1), c.getImageData(0, strip.height - 1, strip.width, 1), c.getImageData(0, 0, 1, strip.height), c.getImageData(strip.width - 1, 0, 1, strip.height)];
+    return { differences, width: strip.width, height: strip.height, clearEdges: edges.every(edge => edge.data.every(value => value === 255)), corner: [...c.getImageData(0, 0, 1, 1).data], fontLoaded: document.fonts.check('16px "Mona Sans"') };
   });
-  expect(result.differences).toEqual([0, 0, 0]); expect(result.width).toBe(356); expect(result.height).toBe(636);
+  expect(result.differences).toEqual([0, 0, 0]); expect(result.width).toBe(378); expect(result.height).toBe(764);
   expect(result.corner).toEqual([255, 255, 255, 255]); expect(result.fontLoaded).toBe(true);
+  expect(result.clearEdges, 'No 3D sticker may be cut by the outer canvas edge').toBe(true);
 });

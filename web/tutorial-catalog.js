@@ -4,8 +4,8 @@ export const tutorials = {
   menu: { title: 'Mulai di sini', color: '#0d6731', seconds: 12, steps: [
     { at: 0, title: 'Pilih mode', detail: 'Klik mode atau arahkan telunjuk ke tombol.' },
     { at: 3, title: 'Tunjuk dan tahan', detail: 'Tahan telunjuk pada tombol selama 0,8 detik.' },
-    { at: 6, title: 'Buka alat', detail: 'Klik ikon alat di samping untuk mengganti pengaturan.' },
-    { at: 9, title: 'Ambil foto', detail: 'Tekan S untuk mengambil foto. Di Photobooth, kepalkan tangan.' },
+    { at: 6, title: 'Buka alat', detail: 'Klik ikon alat di samping. X menutup panel.' },
+    { at: 9, title: 'Ambil foto', detail: 'Tekan S untuk foto, lalu buka Preview Photo.' },
   ] },
   free: { title: 'Efek Tangan', color: '#0d6731', seconds: 12, steps: [
     { at: 0, title: 'Dua jari', detail: 'Bentuk V dengan satu tangan untuk blur seluruh kamera.' },
@@ -15,13 +15,13 @@ export const tutorials = {
   ] },
   painting: { title: 'Painting', color: '#8534f3', seconds: 12, steps: [
     { at: 0, title: 'Cubit untuk melukis', detail: 'Satukan ujung telunjuk dan jempol, lalu gerakkan tangan.' },
-    { at: 3, title: 'Bentuk dengan dua tangan', detail: 'Pilih bentuk. Cubit dengan kedua tangan, rentangkan, lalu lepaskan.' },
+    { at: 3, title: 'Bentuk dengan dua tangan', detail: 'Pilih bentuk. Rentangkan dua cubitan, lalu lepas satu. Kedua tangan tetap terlihat.' },
     { at: 6, title: 'Telapak untuk menghapus', detail: 'Rapatkan lima jari dan sapukan telapak pada gambar.' },
     { at: 9, title: 'Genggaman ringan', detail: 'Tangan yang sedikit digenggam juga dapat menghapus.' },
   ] },
   photobooth: { title: 'Photobooth', color: '#a52379', seconds: 12, steps: [
     { at: 0, title: 'Kepalkan tangan', detail: 'Tahan kepalan selama setengah detik untuk memulai sesi.' },
-    { at: 3, title: 'Ganti pose', detail: 'Tunggu hitungan untuk masing-masing dari tiga foto.' },
+    { at: 3, title: 'Ganti pose', detail: 'Tiga foto, masing-masing dengan hitungan 3 detik. Demo dipercepat.' },
     { at: 6, title: 'Lihat hasil', detail: 'Tiga foto menjadi satu frame. Hasil langsung terbuka setelah selesai.' },
     { at: 9, title: 'Sesi berikutnya', detail: 'Buka telapak, lalu kepalkan tangan lagi untuk sesi berikutnya.' },
   ] },

@@ -27,14 +27,25 @@ try {
   await expect(page.locator('#saved-section')).toBeVisible({ timeout: 25000 });
   check('guest photobooth automatically opens its completed three-shot result');
   const preview = await page.locator('.photo-card img').evaluate(async img => { await img.decode(); return { w: img.naturalWidth, h: img.naturalHeight, alt: img.alt, src: img.src }; });
-  check('guest result is a reduced watermarked preview', Math.max(preview.w, preview.h) <= 960 && preview.alt.includes('pratinjau'));
+  const originalPreview = await page.locator('.photo-card img').evaluate(async img => {
+    const [photo] = await (await import('/photo-store.js')).listPhotos();
+    const bitmap = await createImageBitmap(photo.blob), canvas = document.createElement('canvas');
+    canvas.width = bitmap.width; canvas.height = bitmap.height;
+    const ctx = canvas.getContext('2d'); ctx.drawImage(bitmap, 0, 0); bitmap.close();
+    const original = canvas.toDataURL(); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0);
+    return canvas.width === img.naturalWidth && canvas.height === img.naturalHeight && original === canvas.toDataURL();
+  });
+  check('guest preview uses the original PNG without a watermark', originalPreview);
+  check('public account controls are hidden', await page.locator('#account-open').count() === 0);
   await page.evaluate(() => { window.print = () => document.documentElement.dataset.printed = 'yes'; });
   await page.getByRole('button', { name: 'Print', exact: true }).click(); await expect(page.locator('html')).toHaveAttribute('data-printed', 'yes');
   check('guest Print uses the same preview', await page.locator('#print-area img').getAttribute('src') === preview.src);
-  let downloads = 0; page.on('download', () => { downloads++; });
-  await page.getByRole('link', { name: 'Unduh PNG' }).click(); await expect(page.locator('#studio-account')).toBeVisible();
-  check('official download opens inline login without exporting first', downloads === 0);
-  await page.locator('#studio-account-close').click(); await page.locator('#gallery-close').click();
+  const pending = page.waitForEvent('download');
+  await page.getByRole('link', { name: 'Unduh PNG' }).click();
+  const download = await pending;
+  await expect(page.locator('#studio-account')).toBeHidden();
+  check('guest downloads a PNG directly without login', /\.png$/.test(download.suggestedFilename()));
+  await page.locator('#gallery-close').click();
   for (const mode of ['free', 'painting', 'meme']) { await page.locator(`#mode-nav [data-mode=${mode}]`).click(); await expect(page.locator('body')).toHaveAttribute('data-mode', mode); }
   check('all modes remain reachable without login');
   for (const [width, height] of [[390,844], [844,390], [1366,768]]) {

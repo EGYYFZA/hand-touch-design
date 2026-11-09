@@ -8,8 +8,9 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 // Publish explicit public source files; never recursively copy a source folder
 // that may also contain local credentials, captures, or editor output.
-const publicFiles = ['index.html', 'privacy.html', 'theme.css', 'styles.css', 'motion.css', 'home-motion.js', 'icon.svg', 'app.js', 'photo-strip.js', 'fonts/mona-sans.woff2',
-  'gestures.js', 'vision-worker.js', 'photo-store.js', 'photo-preview.js', 'device-profile.js',
+const publicFiles = ['index.html', 'privacy.html', 'theme.css', 'styles.css', 'motion.css', 'home-motion.js', 'home-scene.js', 'mascot.js', 'home-mascot.webp', 'icon.svg', 'app.js', 'photo-strip.js', 'fonts/mona-sans.woff2',
+  ...['mint', 'star', 'ticket', 'ribbon'].map(name => `home-${name}.webp`),
+  'gestures.js', 'vision-worker.js', 'photo-store.js', 'device-profile.js',
   'cloud-client.js', 'account.html', 'account.js', 'account.css', 'admin.html',
   'cloud-gallery.html', 'cloud-gallery.js', 'cloud-viewer.js', 'studio-cloud.js', 'studio-cloud.css',
   'tutorials.js', 'tutorials.css', 'tutorial-catalog.js',
@@ -20,6 +21,11 @@ for (const name of publicFiles) {
   await copyFile(resolve(root, 'web', name), resolve(output, name));
 }
 await mkdir(resolve(output, 'vendor/wasm'), { recursive: true });
+for (const name of ['three.module.js', 'three.core.js']) {
+  await copyFile(resolve(root, 'node_modules/three/build', name), resolve(output, 'vendor', name));
+}
+await mkdir(resolve(output, 'licenses'), { recursive: true });
+await copyFile(resolve(root, 'node_modules/three/LICENSE'), resolve(output, 'licenses/Three-MIT.txt'));
 await copyFile(resolve(root, 'node_modules/@mediapipe/tasks-vision/vision_bundle.mjs'), resolve(output, 'vendor/vision_bundle.mjs'));
 await cp(resolve(root, 'node_modules/@mediapipe/tasks-vision/wasm'), resolve(output, 'vendor/wasm'), { recursive: true });
 await mkdir(resolve(output, 'models'), { recursive: true });

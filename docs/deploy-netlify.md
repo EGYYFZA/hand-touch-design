@@ -1,7 +1,10 @@
 # Deploy beta EGZ ke Netlify
 
-Target: beta tamu dengan login akun yang sudah ada. Signup dan pemulihan email
-publik menunggu domain pengirim/SMTP; jangan mematikan konfirmasi email.
+Target terbaru: studio tamu gratis dengan preview, unduh PNG asli dan Print tanpa
+login atau watermark. Integrasi akun/cloud di studio publik dinonaktifkan;
+halaman pengelolaan arsip lama tetap memakai autentikasi dan MFA admin. Signup
+dan pemulihan email publik menunggu domain pengirim/SMTP; jangan mematikan
+konfirmasi email.
 
 ## Build dan API
 

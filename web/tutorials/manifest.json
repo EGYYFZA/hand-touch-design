@@ -1,35 +1,35 @@
 {
-  "generator": "Remotion 4.0.539 / ThreeCanvas",
+  "generator": "Remotion 4.0.539 / ThreeCanvas / EGZ mascot guide",
   "dimensions": [
     960,
     540
   ],
-  "fps": 20,
+  "fps": 30,
   "audio": false,
   "clips": {
     "menu": {
-      "bytes": 78125,
-      "sha256": "1d9de465f687f76530bce6ae6e7b6713e0245455edc6cd44349e3b5f3046e862",
+      "bytes": 195715,
+      "sha256": "652b5ad30923e9cf5893907e6c7c849930f93a068dddd938a4dfbb9d7d5b603e",
       "seconds": 12
     },
     "free": {
-      "bytes": 171766,
-      "sha256": "ab7e62112ce5777912bc9403889a62f8f59da38a7a456b99ed4a7dd6fd6e6f4f",
+      "bytes": 235239,
+      "sha256": "116b9a29c3c62a750d0e51c5077f80662eafd970f65849d3f91d1dbe24e56e2b",
       "seconds": 12
     },
     "painting": {
-      "bytes": 126337,
-      "sha256": "ab9a1ba48c181d84a8418701895c0d5aa667c2403f579fa5fa1dccad578b90e3",
+      "bytes": 231253,
+      "sha256": "96c999f95b196a31eb24d4d33906914a9a05c9824dfb5c07c0f46871fe8334f5",
       "seconds": 12
     },
     "photobooth": {
-      "bytes": 84531,
-      "sha256": "16b62e132572c2b2798c814514b9340e5c5cca700976a4b6c59576f2df7518e6",
+      "bytes": 201481,
+      "sha256": "8f9ca43183a65e991c810b5d714f2fa8eb155bcf7f0fe28810a0774adc8c21e0",
       "seconds": 12
     },
     "meme": {
-      "bytes": 66435,
-      "sha256": "aa18a2cb008c4a0125c8264fb2eceded4e2a183b4ec13a9f59fb4be7e02af78c",
+      "bytes": 216647,
+      "sha256": "5ac3627db5f8c8b8e1d35b4353c2bad23c125c6001d17258d13d9a17f1d6d7a4",
       "seconds": 12
     }
   }

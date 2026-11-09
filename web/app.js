@@ -1,10 +1,10 @@
 import { describeHand, automaticEffect, canvasPoint, MemeLatch, distance, clamp, DwellSelector, screenPoint, shapeBounds, hsvToHex, expressionScores, smoothPoint, paintAction } from './gestures.js';
 import { listPhotos, storePhoto, deletePhoto, MAX_PHOTOS } from './photo-store.js';
 import { deviceProfile } from './device-profile.js';
-import { createPhotoStrip } from './photo-strip.js';
-import { createGuestPreview } from './photo-preview.js';
+import { createPhotoStrip, preparePhotoStrip } from './photo-strip.js';
 import { initializeTutorials } from './tutorials.js';
-import { initializeCloud, canUseStudio, cloudIdentity, sameCloudIdentity, preparePhotoCloud, captureConsent, authorizePhotoExport, needsGuestPreview } from './studio-cloud.js';
+import { setHomeCameraStarting } from './home-motion.js';
+import { initializeCloud, canUseStudio, cloudIdentity, sameCloudIdentity, preparePhotoCloud, captureConsent, authorizePhotoExport } from './studio-cloud.js';
 
 const $ = id => document.getElementById(id);
 const video = $('video'), preview = $('preview'), ctx = preview.getContext('2d');
@@ -250,7 +250,7 @@ async function startCamera() {
   if (starting || live) return;
   if (!navigator.mediaDevices?.getUserMedia) { feedback('Kamera memerlukan HTTPS atau localhost dan browser yang mendukung kamera.', true); return; }
   const request = ++generation;
-  starting = true; $('start-camera').disabled = true; $('start-camera').textContent = 'Menghubungkan...';
+  starting = true; setHomeCameraStarting(true); $('start-camera').disabled = true; $('start-camera').textContent = 'Menghubungkan...';
   $('camera-message').textContent = 'Izinkan akses kamera pada browser. Mikrofon tidak digunakan.';
   try {
     profile = deviceProfile({ compact: matchMedia('(max-width: 760px), (pointer: coarse)').matches,
@@ -265,9 +265,10 @@ async function startCamera() {
     live = true; lastFreshAt = performance.now(); lastVideoTime = -1;
     next.getVideoTracks()[0].addEventListener('ended', () => { if (stream === next) stopCamera('Kamera terputus. Sambungkan kembali lalu aktifkan kamera.'); });
     $('empty-state').hidden = true;
+    setHomeCameraStarting(false);
     $('camera-state').textContent = 'KAMERA AKTIF'; $('camera-state').className = 'badge live';
     $('tracking-state').textContent = 'Menyiapkan model gestur...';
-    if (session?.paused) { session.nextAt = performance.now() + session.remaining; session.paused = false; }
+    if (session?.paused && !session.preparing) { session.nextAt = performance.now() + session.remaining; session.paused = false; }
     if (phase === 'setup') {
       calibrationStep = 'palms'; calibrationHold = new DwellSelector();
       $('calibration').hidden = false; $('calibration-progress').hidden = false; $('calibration-progress').value = 0;
@@ -302,6 +303,7 @@ function stopCamera(message = 'Kamera dimatikan. Foto tersimpan di Hasil.') {
   lastPaint = null; pointerDown = false; fistSince = null; fistArmed = true;
   ctx.clearRect(0, 0, preview.width, preview.height);
   $('empty-state').hidden = false; $('camera-message').textContent = message;
+  setHomeCameraStarting(false);
   $('camera-state').textContent = 'KAMERA TIDAK AKTIF'; $('camera-state').className = 'badge';
   $('countdown').hidden = true;
   $('tracking-state').textContent = session ? 'Sesi foto dijeda. Aktifkan kamera untuk melanjutkan.' : 'Kamera tidak aktif.';
@@ -383,14 +385,19 @@ function drawMeme(name) {
   ctx.drawImage(image, x, y, size, size); ctx.restore();
 }
 
-function beginSession() {
+async function beginSession() {
   if (!canUseStudio()) return;
   if (galleryLoading) { feedback('Menyiapkan galeri lokal. Coba lagi sebentar.'); return; }
   if (!live || session || pendingSave || phase !== 'studio' || performance.now() - lastFreshAt > 1000) return;
   if (photos.length >= MAX_PHOTOS) { feedback('Galeri penuh. Unduh dan hapus beberapa foto sebelum mengambil lagi.', true); return; }
-  session = { shots: [], nextAt: performance.now() + 3000, paused: false, remaining: 3000, cloudConsentAtCapture: captureConsent(), ownerId: cloudIdentity().ownerId };
+  const current = session = { shots: [], nextAt: 0, paused: true, preparing: true, remaining: 3000, cloudConsentAtCapture: captureConsent(), ownerId: cloudIdentity().ownerId };
   for (const item of document.querySelectorAll('.shot-list li')) item.classList.remove('taken');
-  feedback('Sesi dimulai. Tiga foto akan diambil.');
+  feedback('Menyiapkan frame...');
+  // Resolve artwork before counting so slow assets cannot delay completed shots.
+  const complete = await preparePhotoStrip();
+  if (session !== current) return;
+  current.preparing = false; current.nextAt = performance.now() + 3000; current.paused = !live;
+  feedback(complete ? 'Sesi dimulai. Tiga foto akan diambil.' : 'Sebagian hiasan belum tersedia. Tiga foto tetap akan disimpan.');
 }
 
 function cancelSession() {
@@ -464,17 +471,13 @@ async function savePhoto(canvas, kind = mode, consentOverride = undefined) {
 }
 
 async function addPhoto(record, persisted, freshCapture = false) {
-    const identity = cloudIdentity(), guestPreview = needsGuestPreview();
-    let displayBlob;
-    try { displayBlob = guestPreview ? await createGuestPreview(record.blob) : record.blob; }
-    catch { if (sameCloudIdentity(identity)) feedback('Pratinjau gagal. Foto asli tetap tersimpan; masuk untuk membuka hasilnya.', true); }
+    const identity = cloudIdentity();
     if (!sameCloudIdentity(identity)) return;
-    // Never fall back to exposing the original in a guest image or Print view.
-    const entry = { ...record, freshCapture, persisted, url: displayBlob ? URL.createObjectURL(displayBlob) : null };
+    const entry = { ...record, freshCapture, persisted, url: URL.createObjectURL(record.blob) };
     photos.push(entry);
     const card = document.createElement('article'); card.className = 'photo-card'; card.dataset.photo = entry.id;
     const image = new Image(); if (entry.url) image.src = entry.url;
-    image.alt = entry.url ? `Foto ${entry.kind}${guestPreview ? ' · pratinjau' : ''}` : 'Pratinjau belum tersedia. Masuk untuk hasil asli.';
+    image.alt = `Foto ${entry.kind}`;
     const title = document.createElement('p'); title.textContent = `${entry.name} · ${persisted ? 'Tersimpan di browser ini' : 'Sementara — unduh sekarang'}`;
     const actions = document.createElement('div'); actions.className = 'photo-actions';
     const download = document.createElement('a'); download.href = '#unduh'; download.download = entry.name; download.textContent = 'Unduh PNG';
@@ -483,7 +486,7 @@ async function addPhoto(record, persisted, freshCapture = false) {
       link.href = url; link.download = entry.name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
     }, entry.ownerId); });
     const print = document.createElement('button'); print.textContent = 'Print'; print.dataset.print = entry.id;
-    print.disabled = !entry.url; print.title = guestPreview ? 'Cetak pratinjau ber-watermark' : 'Cetak hasil asli';
+    print.disabled = !entry.url; print.title = 'Cetak hasil asli';
     print.addEventListener('click', () => printPhoto(entry));
     const remove = document.createElement('button'); remove.textContent = cloudIdentity().configured ? 'Hapus lokal' : 'Hapus';
     const confirmDelete = document.createElement('button'); confirmDelete.textContent = 'Ya, hapus'; confirmDelete.hidden = true;
