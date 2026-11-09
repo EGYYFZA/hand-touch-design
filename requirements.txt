@@ -1,4 +1,4 @@
-# MediaPipe hanya mendukung Python 3.9 - 3.12.
+# Runtime desktop: Python 3.11 - 3.12 (Pillow 13 dan baseline MediaPipe/NumPy).
 opencv-python>=4.8,<5
 mediapipe>=0.10.9,<0.11
 numpy>=1.24,<2

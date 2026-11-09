@@ -11,12 +11,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-MIN_PY = (3, 9)
+MIN_PY = (3, 11)
 MAX_PY = (3, 12)
 
 
 def check_python() -> str | None:
-    """MediaPipe hanya punya wheel untuk Python 3.9 - 3.12.
+    """Rentang bersama Pillow yang ditambal dan dependency MediaPipe/NumPy.
 
     Diperiksa di sini karena kegagalannya jauh dari sebabnya: menjalankan
     `python -m venv .venv` dengan Python bawaan sistem yang lebih baru akan
@@ -27,7 +27,7 @@ def check_python() -> str | None:
     if MIN_PY <= current <= MAX_PY:
         return None
     return (
-        f"Python {current[0]}.{current[1]} tidak didukung MediaPipe "
+        f"Python {current[0]}.{current[1]} tidak didukung dependensi EGZ "
         f"(butuh {MIN_PY[0]}.{MIN_PY[1]} - {MAX_PY[0]}.{MAX_PY[1]}).\n"
         f"  Interpreter: {sys.executable}\n"
         f"  Buat ulang venv dengan Python 3.12:\n"
