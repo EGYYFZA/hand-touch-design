@@ -3,6 +3,6 @@
   "site_id": "21266221-5053-4b58-a64e-b9debbd9cbc7",
   "canonical_origin": "https://egz-gesture-studio.netlify.app",
   "production_branch": "main",
-  "release_channel": "guest-beta-existing-accounts",
+  "release_channel": "guest-free-local",
   "public_signup_enabled": false
 }

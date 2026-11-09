@@ -1,11 +1,13 @@
 import { api, refreshSession, logout, CONSENT_VERSION } from './cloud-client.js';
 import { setPhotoOwner, activatePhotoOwner, clearPhotoOwner, claimGuestPhotos, GUEST_OWNER } from './photo-store.js';
 import { createCloudViewer } from './cloud-viewer.js';
-let state = null, epoch = 0, hooks = null, ready = false, pendingExport = null, changing = Promise.resolve();
+// Public studio is local-only for now; account/admin services remain private.
+export const STUDIO_ACCOUNTS_ENABLED = false;
+let state = null, epoch = 0, hooks = null, ready = false, changing = Promise.resolve();
 let authGeneration = 0, verifyGeneration = 0, authBusy = false;
 let viewer = null;
 const $ = id => document.getElementById(id);
-const channel = globalThis.BroadcastChannel ? new BroadcastChannel('egz-account') : null;
+const channel = STUDIO_ACCOUNTS_ENABLED && globalThis.BroadcastChannel ? new BroadcastChannel('egz-account') : null;
 export const MAX_CLOUD_BYTES = 3 * 1024 * 1024;
 
 export async function prepareCloudImage(original) {
@@ -31,16 +33,15 @@ export async function prepareCloudImage(original) {
     throw new Error('Salinan cloud belum dapat diperkecil ke batas 3 MB. Foto asli tetap lokal dan dapat diunduh.');
   } finally { image.close(); }
 }
-export function cloudIdentity() { return { ownerId: state?.user?.id || (state?.configured === false ? null : GUEST_OWNER), epoch, configured: state?.configured !== false }; }
+export function cloudIdentity() { return { ownerId: STUDIO_ACCOUNTS_ENABLED ? state?.user?.id || (state?.configured === false ? null : GUEST_OWNER) : GUEST_OWNER, epoch, configured: state?.configured !== false }; }
 export function sameCloudIdentity(identity) { return identity.epoch === epoch && identity.ownerId === cloudIdentity().ownerId; }
 export function canUseStudio() { return ready; }
-export function needsGuestPreview() { return state?.configured !== false && !state?.user; }
 
 function renderAccount() {
   const signedIn = !!state?.user;
   $('studio-signed-out').hidden = signedIn;
   $('studio-signed-in').hidden = !signedIn;
-  $('studio-account-title').textContent = signedIn ? 'Akun' : 'Masuk untuk unduh';
+  $('studio-account-title').textContent = signedIn ? 'Akun' : 'Masuk';
   $('studio-user-email').textContent = state?.user?.email || '';
   $('studio-consent').checked = !!state?.consent?.active;
   $('studio-admin-link').hidden = !state?.isAdmin;
@@ -89,7 +90,6 @@ function adoptSession(next, claim = false, valid = () => true) {
 
 async function expire(text = 'Sesi berakhir. Studio tetap dapat digunakan.') {
   authGeneration++; verifyGeneration++;
-  pendingExport = null;
   await adoptSession({ ...state, configured: true, user: null, consent: null });
   $('studio-account-status').textContent = text;
 }
@@ -104,21 +104,18 @@ async function verify(claim = false) {
 }
 
 export async function authorizePhotoExport(action, ownerId = cloudIdentity().ownerId) {
-  // --demo is an explicit operator-only loopback preview, never public auth.
-  if (state?.configured === false) { action(); return; }
+  if (!ready) return;
+  // Guest originals belong to this browser; exporting them never needs Auth.
+  if (ownerId === GUEST_OWNER && cloudIdentity().ownerId === GUEST_OWNER) { action(); return; }
+  if (state?.configured === false && ownerId === cloudIdentity().ownerId) { action(); return; }
   try {
-    const next = await verify(true);
-    if (next.user) {
-      if (ownerId === GUEST_OWNER || ownerId === next.user.id) action();
-      else hooks.notice('Akun berubah. Buka kembali foto milik akun aktif.');
+    const next = await verify();
+    if (next.user && ownerId === next.user.id) {
+      action();
       return;
     }
   } catch { /* Local studio still works when the account service is offline. */ }
-  pendingExport = { action, ownerId };
-  $('studio-account-status').textContent = 'Foto tetap tersimpan di perangkat.';
-  renderAccount();
-  if (!$('studio-account').open) $('studio-account').showModal();
-  $('studio-email').focus();
+  hooks.notice('Akun berubah. Buka kembali foto milik akun aktif.');
 }
 
 function controls() {
@@ -127,11 +124,9 @@ function controls() {
   const dialog = $('studio-account'), result = $('studio-account-status');
   button.addEventListener('click', () => { renderAccount(); dialog.showModal(); verify().catch(error => { result.textContent = error.message; }); });
   $('studio-account-close').addEventListener('click', () => dialog.close());
-  dialog.addEventListener('close', () => { pendingExport = null; $('studio-password').value = ''; $('studio-confirm-code').value = ''; $('studio-login-form').hidden = false; $('studio-confirm-form').hidden = true; });
-  function finishLogin(next) {
-    const resume = pendingExport; pendingExport = null; dialog.close();
-    if (resume && (resume.ownerId === GUEST_OWNER || resume.ownerId === next.user.id)) resume.action();
-    else if (resume) hooks.notice('Foto tersebut milik akun sebelumnya.');
+  dialog.addEventListener('close', () => { $('studio-password').value = ''; $('studio-confirm-code').value = ''; $('studio-login-form').hidden = false; $('studio-confirm-form').hidden = true; });
+  function finishLogin() {
+    dialog.close();
     channel?.postMessage({ type: 'login' });
   }
   async function auth(action) {
@@ -146,7 +141,7 @@ function controls() {
       $('studio-password').value = '';
       if (response?.confirmationRequired) { $('studio-login-form').hidden = true; $('studio-confirm-form').hidden = false; $('studio-confirm-code').focus(); result.textContent = 'Periksa email untuk konfirmasi.'; return; }
       const next = await verify(true);
-      if (next.user) finishLogin(next);
+      if (next.user) finishLogin();
     } catch (error) { result.textContent = error.message; }
     finally { authBusy = false; buttons.forEach(item => { item.disabled = false; }); renderAccount(); }
   }
@@ -159,7 +154,7 @@ function controls() {
       await api('confirm', { method: 'POST', body: { email: $('studio-email').value.trim(), token: $('studio-confirm-code').value.trim() } });
       $('studio-confirm-code').value = ''; $('studio-confirm-form').hidden = true; $('studio-login-form').hidden = false;
       const next = await verify(true);
-      if (next.user) finishLogin(next);
+      if (next.user) finishLogin();
       else result.textContent = 'Email terkonfirmasi. Masuk dengan password Anda.';
     } catch (error) { result.textContent = error.message; }
     finally { authBusy = false; if (submit) submit.disabled = false; }
@@ -173,7 +168,7 @@ function controls() {
   });
   $('studio-consent').addEventListener('change', async () => {
     const consent = $('studio-consent'), desired = consent.checked; consent.disabled = true;
-    try { await api('consent', { method: 'POST', body: { granted: desired, version: CONSENT_VERSION } }); await verify(); result.textContent = desired ? 'Persetujuan aktif untuk foto baru.' : 'Pengiriman foto baru dihentikan.'; channel?.postMessage({ type: 'consent' }); }
+    try { await api('consent', { method: 'POST', body: { granted: desired, version: CONSENT_VERSION } }); await verify(); result.textContent = desired ? 'Persetujuan aktif untuk foto baru.' : 'Salinan cloud dijadwalkan dihapus. Foto lokal tetap tersedia.'; channel?.postMessage({ type: 'consent' }); }
     catch (error) { consent.checked = !desired; result.textContent = error.message; }
     finally { consent.disabled = false; }
   });
@@ -184,6 +179,13 @@ function controls() {
 
 export async function initializeCloud(callbacks) {
   hooks = callbacks;
+  if (!STUDIO_ACCOUNTS_ENABLED) {
+    state = { configured: false, user: null, consent: null };
+    setPhotoOwner(GUEST_OWNER); ready = true;
+    document.body.dataset.localOnly = 'true';
+    await hooks.restore();
+    return true;
+  }
   // Public camera/effects are local and independent of Auth availability.
   state = { configured: true, user: null, consent: null };
   setPhotoOwner(GUEST_OWNER); ready = true; controls();

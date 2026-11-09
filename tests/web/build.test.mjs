@@ -17,6 +17,8 @@ test('rebuilding removes stale files and publishes only the web allowlist', asyn
   await assert.rejects(access(resolve(root, 'dist/private-build-fixture.txt')), { code: 'ENOENT' });
   await access(resolve(root, 'dist/index.html'));
   await access(resolve(root, 'dist/models/hand_landmarker.task'));
+  for (const file of ['home-scene.js', 'mascot.js', 'home-mascot.webp', 'vendor/three.module.js', 'vendor/three.core.js', 'licenses/Three-MIT.txt']) await access(resolve(root, 'dist', file));
+  for (const name of ['mint', 'star', 'ticket', 'ribbon']) await access(resolve(root, `dist/home-${name}.webp`));
   for (const meme of ['clingy', 'idea', 'shock', 'tongue']) await access(resolve(root, `dist/memes/${meme}.webp`));
   const published = await readdir(resolve(root, 'dist'));
   for (const privateName of ['captures', '.env', '.git', '.venv', '.local-assets', 'core']) {

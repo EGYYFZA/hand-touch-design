@@ -12,7 +12,11 @@ npm.cmd run tutorials:render
 npm.cmd run build
 ```
 
-Render selected scenes with `node tools/tutorial-video/render.mjs painting photobooth`. Timeline, geometry and lighting live in `index.jsx`; chapter copy lives in `web/tutorial-catalog.js`. All animation is driven by Remotion's current frame. Edit the chapter copy before rendering so MP4 labels, captions and browser instructions remain synchronized.
+Render selected scenes with `node tools/tutorial-video/render.mjs painting photobooth`. Render four chapter stills per clip with `node tools/tutorial-video/render.mjs --stills`; inspect transforms and poses with `npm.cmd --prefix tools/tutorial-video run inspect`. Evidence is written to ignored `docs/ui-preview/tutorial-revamp/`.
+
+Timeline, captions and lighting live in `index.jsx`; procedural demonstrations and deterministic poses live in `scene.mjs`. The guide reuses the original landing character from `web/mascot.js`, injected with the renderer's own Three.js version. Chapter copy lives in `web/tutorial-catalog.js`. All animation is driven by Remotion's current frame. Edit the chapter copy before rendering so MP4 labels, captions and browser instructions remain synchronized.
+
+Each silent clip is 960 × 540, 30 fps, 12 seconds, with chapters at 0/3/6/9 seconds. Before rendering, the inspector samples 600 frames across the five scenes and checks camera framing, finite transforms, 3D finger joints, pinch contact, L directions, shape release, portrait depth and reproducible seeking. This inspects the actual Three.js scene; no Blender project or armature is involved. Rendering uses `.cache/tutorial-render/` and copies completed clips to `web/tutorials/` only after the selected batch finishes.
 
 The renderer uses the root project's installed Playwright Chromium. Set `REMOTION_BROWSER_EXECUTABLE` to use another compatible Chromium executable. On native Windows ARM, Remotion's automatic browser/compositor discovery is unavailable. Windows' x64 emulation can run the official matching compositor:
 

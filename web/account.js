@@ -62,7 +62,7 @@ $('cloud-consent').addEventListener('change', async () => {
   try {
     await api('consent', { method: 'POST', body: { granted: desired, version: CONSENT_VERSION } });
     await refreshSession();
-    status(desired ? 'Persetujuan aktif untuk foto baru. Foto lama tidak otomatis diunggah.' : 'Persetujuan dicabut. Pengiriman foto baru dihentikan.');
+    status(desired ? 'Persetujuan aktif untuk foto baru. Foto lama tidak otomatis diunggah.' : 'Persetujuan dicabut. Salinan cloud dijadwalkan dihapus; foto lokal tetap tersedia.');
     channel?.postMessage({ type: 'consent' });
   } catch (error) { box.checked = !desired; status(error.message, true); }
   finally { box.disabled = false; }

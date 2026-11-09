@@ -11,6 +11,7 @@
   "scripts": {
     "build": "node tools/build-web.mjs",
     "tutorials:render": "node tools/tutorial-video/render.mjs",
+    "home:poster": "node tools/render-home-poster.mjs",
     "dev": "npm run build && node tools/serve-web.mjs",
     "test": "node --test tests/web/*.test.mjs",
     "test:e2e": "playwright test",
@@ -24,7 +25,8 @@
   "dependencies": {
     "@mediapipe/tasks-vision": "0.10.35",
     "@supabase/supabase-js": "^2.118.0",
-    "sharp": "^0.35.5"
+    "sharp": "^0.35.5",
+    "three": "0.187.0"
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",

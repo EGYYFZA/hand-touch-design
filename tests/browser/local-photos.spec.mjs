@@ -46,7 +46,7 @@ test('storage denial preserves download and warns that the photo is temporary', 
 
 test('local photo budget rejects concurrent overflow without evicting existing photos', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('body')).toHaveAttribute('data-local-demo', 'true');
+  await expect(page.locator('body')).toHaveAttribute('data-local-only', 'true');
   const result = await page.evaluate(async () => {
     const { storePhoto, listPhotos, deletePhoto, MAX_PHOTOS, MAX_LOCAL_BYTES } = await import('/photo-store.js');
     const make = id => ({ id, createdAt: Date.now(), kind: 'free', name: 'synthetic.png', blob: new Blob(['synthetic fixture'], { type: 'image/png' }) });

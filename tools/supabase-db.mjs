@@ -1,6 +1,6 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { createHash } from 'node:crypto';
+import { migrationDigests } from './migration-checksum.mjs';
 import pg from 'pg';
 
 const root = resolve(import.meta.dirname, '..');
@@ -18,9 +18,9 @@ try {
     await client.query('create schema if not exists egz_internal; revoke all on schema egz_internal from public, anon, authenticated; create table if not exists egz_internal.schema_migrations(version text primary key, sha256 text not null, applied_at timestamptz not null default now())');
     for (const file of (await readdir(resolve(root, 'supabase/migrations'))).filter(name => name.endsWith('.sql')).sort()) {
       const sql = await readFile(resolve(root, 'supabase/migrations', file), 'utf8');
-      const digest = createHash('sha256').update(sql).digest('hex');
+      const digests = migrationDigests(sql), digest = digests[0];
       const applied = (await client.query('select sha256 from egz_internal.schema_migrations where version=$1', [file])).rows[0];
-      if (applied) { if (applied.sha256 !== digest) throw new Error('Applied migration was modified'); console.log(`Already applied: ${file}`); continue; }
+      if (applied) { if (!digests.includes(applied.sha256)) throw new Error('Applied migration was modified'); console.log(`Already applied: ${file}`); continue; }
       const body = sql.replace(/(^|\n)begin;\r?\n/i, '$1').replace(/\ncommit;\s*$/i, '\n');
       await client.query('begin');
       try {

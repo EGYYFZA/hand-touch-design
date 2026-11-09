@@ -16,14 +16,17 @@ owner-scoped metadata/Storage RLS and MFA admin membership. Browser camera
 processing stays local; cloud uploads require explicit consent. All cloud
 photos expire after 30 days and a cloud job removes physical objects through
 Storage API. Account cache is scoped by UID and cleared on logout/account switch.
-Public camera/effects/capture/Print work without login. Guest photos share a
-local browser-profile namespace until explicit login claims them; legacy demo
-photos remain separate. PNG download requests inline login. This client-side
-product gate cannot prevent screenshots, DevTools or physical access to local images.
-Guest gallery and Print use reduced, watermarked previews; verified login restores
-the original for official export. If preview generation fails, the original is
-never substituted into the guest gallery or Print. The original remains in the
-local cache for recovery and is accessible to the person controlling the browser.
+The public studio currently disables its account/cloud integration through
+`STUDIO_ACCOUNTS_ENABLED = false` in `web/studio-cloud.js`. Camera, all modes,
+local gallery, original PNG download and Print are free without login or
+watermarks. The studio does not fetch account sessions or upload photos, even
+if this browser has an existing account cookie. Photos use the local guest
+namespace; old UID caches and legacy demo photos are not merged or exposed.
+Visitors using the same browser profile share that local gallery and should
+download then delete their photos on shared devices. Existing cloud/admin
+routes retain authentication, RLS and MFA; local export access does not grant
+access to another user's cloud photos. The optional account integration remains
+covered by separate browser fixtures, alongside tests of the default public build.
 Login and MFA rotate the opaque session ID and CSRF token and revoke the replaced
 session. A revoked session cannot be upgraded through an in-flight MFA request.
 Guest/older photos require consent plus a specific manual cloud-save action;

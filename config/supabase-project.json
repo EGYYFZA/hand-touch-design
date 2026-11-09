@@ -24,9 +24,9 @@
   "application_integration_active": true,
   "guest_studio_enabled": true,
   "login_required_for": [
-    "png_download",
     "cloud_gallery",
-    "cloud_upload"
+    "cloud_upload",
+    "admin_archive"
   ],
   "application_hosting": "Netlify guest beta",
   "public_registration_enabled": false,
@@ -42,5 +42,6 @@
   "auth_provider_public_signup_enabled": false,
   "minimum_password_length": 12,
   "email_otp_expiry_seconds": 600,
-  "secure_password_change": true
+  "secure_password_change": true,
+  "public_studio_account_integration_active": false
 }

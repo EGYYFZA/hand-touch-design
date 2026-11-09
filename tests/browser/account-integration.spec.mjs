@@ -6,6 +6,15 @@ const UID_B = '22222222-2222-4222-8222-222222222222';
 const PHOTO = '33333333-3333-4333-8333-333333333333';
 const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQAAAABJRU5ErkJggg==';
 
+// Exercise the retained optional integration; the default public build is tested separately.
+test.beforeEach(async ({ context }) => {
+  await context.route('**/studio-cloud.js', async route => {
+    const response = await route.fetch(), source = await response.text();
+    expect(source).toContain('STUDIO_ACCOUNTS_ENABLED = false');
+    await route.fulfill({ response, body: source.replace('STUDIO_ACCOUNTS_ENABLED = false', 'STUDIO_ACCOUNTS_ENABLED = true') });
+  });
+});
+
 async function mockAccount(page, state) {
   const requests = [];
   await page.route('**/api/studio?**', async route => {
@@ -31,7 +40,7 @@ async function mockAccount(page, state) {
   return requests;
 }
 
-test('guest photobooth works before login, preserves photos, and resumes download after inline login', async ({ page }) => {
+test('guest photobooth downloads freely; optional login preserves photos without uploading', async ({ page }) => {
   await fakeVision(page);
   const state = { user: null, loginError: true };
   const requests = await mockAccount(page, state);
@@ -41,22 +50,22 @@ test('guest photobooth works before login, preserves photos, and resumes downloa
   await expect(page.locator('#saved-section')).toBeVisible();
   expect(requests.some(item => item.action === 'login' || item.action === 'upload')).toBe(false);
   const preview = await page.locator('.photo-card img').evaluate(async img => { await img.decode(); return { w: img.naturalWidth, h: img.naturalHeight }; });
-  expect(Math.max(preview.w, preview.h)).toBeLessThanOrEqual(960);
   const original = await page.evaluate(async () => {
     const photo = (await (await import('/photo-store.js')).listPhotos())[0];
     const image = await createImageBitmap(photo.blob); const size = { w: image.width, h: image.height }; image.close(); return size;
   });
-  expect(original.h).toBeGreaterThan(preview.h);
+  expect(preview).toEqual(original);
   await page.reload(); await expect(page.locator('#photo-count')).toHaveText('1'); await page.locator('#gallery-toggle').click();
+  const freeDownload = page.waitForEvent('download');
   await page.getByRole('link', { name: 'Unduh PNG' }).click();
-  await expect(page.locator('#studio-account')).toBeVisible(); await expect(page.locator('#studio-email')).toBeFocused();
+  expect((await freeDownload).suggestedFilename()).toMatch(/photobooth.*\.png$/);
+  await expect(page.locator('#studio-account')).toBeHidden();
+  await page.locator('#gallery-close').click(); await page.locator('#account-open').click();
   await page.locator('#studio-email').fill('synthetic@example.test'); await page.locator('#studio-password').fill('synthetic password');
   await page.locator('#studio-login-form').getByRole('button', { name: 'Masuk', exact: true }).click();
   await expect(page.locator('#studio-account-status')).toContainText('password salah');
   state.loginError = false; await page.locator('#studio-password').fill('synthetic password');
-  const pending = page.waitForEvent('download');
   await page.locator('#studio-login-form').getByRole('button', { name: 'Masuk', exact: true }).click();
-  const download = await pending; expect(download.suggestedFilename()).toMatch(/photobooth.*\.png$/);
   await expect(page).toHaveURL(/\/$/); await expect(page.locator('#studio-account')).toBeHidden();
   await expect(page.locator('#photo-count')).toHaveText('1');
   const adopted = await page.evaluate(async () => { const store = await import('/photo-store.js'); const own = await store.listPhotos(); store.setPhotoOwner('guest'); const guest = await store.listPhotos(); store.setPhotoOwner(own[0].ownerId); return { own: own.map(p => ({ owner: p.ownerId, consent: p.cloudConsentAtCapture })), guest: guest.length }; });
@@ -101,7 +110,7 @@ test('account cache hides legacy photos, scopes owner data, and clears cache on 
   expect(requests.find(request => request.action === 'logout').csrf).toBe('csrf-fixture');
 });
 
-test('Auth outage does not block guest camera, capture, Print or canceling login', async ({ page }) => {
+test('Auth outage does not block original guest preview, download or Print', async ({ page }) => {
   await fakeVision(page);
   await page.route('**/api/studio?**', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Unavailable fixture' }) }));
   await page.goto('/'); await page.keyboard.press('m'); await page.locator('#mode-nav [data-mode=free]').click(); await page.keyboard.press('s');
@@ -118,15 +127,19 @@ test('Auth outage does not block guest camera, capture, Print or canceling login
     const ctx = canvas.getContext('2d'); ctx.drawImage(original, 0, 0, canvas.width, canvas.height);
     const raw = canvas.toDataURL(); original.close(); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0);
     return raw !== canvas.toDataURL();
-  })).toBe(true);
-  await page.getByRole('link', { name: 'Unduh PNG' }).click(); await expect(page.locator('#studio-account')).toBeVisible();
+  })).toBe(false);
+  const pending = page.waitForEvent('download');
+  await page.getByRole('link', { name: 'Unduh PNG' }).click(); await pending;
+  await expect(page.locator('#studio-account')).toBeHidden();
+  await page.locator('#gallery-close').click(); await page.locator('#account-open').click();
   await page.locator('#studio-account-close').focus(); await page.keyboard.press('s'); await page.keyboard.press('2');
   await expect(page.locator('#photo-count')).toHaveText('1'); await expect(page.locator('body')).toHaveAttribute('data-mode', 'free');
-  await page.keyboard.press('Escape'); await expect(page.locator('#studio-account')).toBeHidden(); await expect(page.locator('#saved-section')).toBeVisible();
+  await page.keyboard.press('Escape'); await expect(page.locator('#studio-account')).toBeHidden();
+  await page.locator('#gallery-toggle').click(); await expect(page.locator('#saved-section')).toBeVisible();
   await expect(page.locator('.photo-card')).toHaveCount(1); await expect(page).toHaveURL(/\/$/);
 });
 
-test('failed guest preview never falls back to an original image or print', async ({ page }) => {
+test('guest preview and export use the original without bitmap conversion', async ({ page }) => {
   await fakeVision(page); await mockAccount(page, { user: null });
   await page.addInitScript(() => {
     const original = window.createImageBitmap;
@@ -134,10 +147,12 @@ test('failed guest preview never falls back to an original image or print', asyn
   });
   await page.goto('/'); await page.keyboard.press('m'); await page.locator('#mode-nav [data-mode=free]').click(); await page.keyboard.press('s');
   await expect(page.locator('#photo-count')).toHaveText('1'); await page.locator('#gallery-toggle').click();
-  expect(await page.locator('.photo-card img').getAttribute('src')).toBeNull();
-  await expect(page.getByRole('button', { name: 'Print', exact: true })).toBeDisabled();
+  expect(await page.locator('.photo-card img').evaluate(async img => { await img.decode(); return img.naturalWidth; })).toBeGreaterThan(0);
+  await expect(page.getByRole('button', { name: 'Print', exact: true })).toBeEnabled();
   expect(await page.evaluate(async () => (await (await import('/photo-store.js')).listPhotos())[0].blob.size)).toBeGreaterThan(0);
-  await page.getByRole('link', { name: 'Unduh PNG' }).click(); await expect(page.locator('#studio-account')).toBeVisible();
+  const pending = page.waitForEvent('download');
+  await page.getByRole('link', { name: 'Unduh PNG' }).click(); await pending;
+  await expect(page.locator('#studio-account')).toBeHidden();
 });
 
 test('completed photobooth waits for the account dialog before opening the result', async ({ page }) => {
@@ -194,9 +209,9 @@ test('failed cleanup of an old cache owner cannot discard temporary guest photos
   await mockAccount(page, { user: null }); await page.goto('/'); await page.keyboard.press('m'); await page.locator('#mode-nav [data-mode=free]').click();
   await page.keyboard.press('s'); await expect(page.locator('#photo-count')).toHaveText('1');
   await page.keyboard.press('s'); await expect(page.locator('#photo-count')).toHaveText('2');
-  await page.locator('#gallery-toggle').click(); await page.getByRole('link', { name: 'Unduh PNG' }).first().click();
+  await page.locator('#account-open').click();
   await page.locator('#studio-email').fill('synthetic@example.test'); await page.locator('#studio-password').fill('synthetic password');
-  const pending = page.waitForEvent('download'); await page.locator('#studio-login-form').getByRole('button', { name: 'Masuk', exact: true }).click(); await pending;
+  await page.locator('#studio-login-form').getByRole('button', { name: 'Masuk', exact: true }).click();
   await expect(page.locator('#studio-account')).toBeHidden(); await expect(page.locator('.photo-card')).toHaveCount(2); await expect(page.locator('#photo-count')).toHaveText('2');
   expect(await page.evaluate(async () => (await import('/photo-store.js')).photoOwner())).toBe(UID_A);
   await expect(page.locator('#feedback')).toContainText('sementara');
@@ -262,9 +277,9 @@ test('no cloud upload without consent and consent does not retroactively send ol
 test('an adopted guest photo uploads only after consent and a specific manual save', async ({ page }) => {
   await fakeVision(page); const state = { user: null, consent: false }; const requests = await mockAccount(page, state);
   await page.goto('/'); await page.keyboard.press('m'); await page.locator('#mode-nav [data-mode=free]').click(); await page.keyboard.press('s');
-  await expect(page.locator('#photo-count')).toHaveText('1'); await page.locator('#gallery-toggle').click(); await page.getByRole('link', { name: 'Unduh PNG' }).click();
+  await expect(page.locator('#photo-count')).toHaveText('1'); await page.locator('#account-open').click();
   await page.locator('#studio-email').fill('synthetic@example.test'); await page.locator('#studio-password').fill('synthetic password');
-  const downloaded = page.waitForEvent('download'); await page.locator('#studio-login-form').getByRole('button', { name: 'Masuk', exact: true }).click(); await downloaded;
+  await page.locator('#studio-login-form').getByRole('button', { name: 'Masuk', exact: true }).click();
   await page.locator('#gallery-toggle').click(); await page.getByRole('button', { name: 'Simpan foto ini ke cloud' }).click();
   await expect(page.locator('#studio-account')).toBeVisible(); expect(requests.filter(request => request.action === 'upload')).toHaveLength(0);
   await page.locator('#studio-consent').check(); await expect(page.locator('#studio-account-status')).toContainText('Persetujuan aktif'); await page.locator('#studio-account-close').click();
