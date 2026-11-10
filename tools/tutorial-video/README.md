@@ -1,32 +1,36 @@
-# EGZ tutorial renderer
+# Tutorial renderer
 
-This isolated, private tooling package renders the original five 3D feature tutorials. It is not installed by the website build and is never included in browser or backend bundles. The static build copies only the generated MP4/JPEG/WebVTT allowlist under `web/tutorials/`.
+The five feature tutorials reuse the EGZ mascot in 3D scenes. Each silent clip is
+960 × 540, 30 fps and 12 seconds long, with captions and four chapters. The
+website serves the rendered videos; it does not load Remotion or React.
 
 From the repository root:
 
-```powershell
-npm.cmd ci --prefix tools/tutorial-video --ignore-scripts
-npm.cmd audit --prefix tools/tutorial-video
-npm.cmd exec --no -- playwright install chromium
-npm.cmd run tutorials:render
-npm.cmd run build
+```sh
+npm ci --prefix tools/tutorial-video --ignore-scripts
+npx --no-install playwright install chromium
+npm run tutorials:render
+npm run build
 ```
 
-Render selected scenes with `node tools/tutorial-video/render.mjs painting photobooth`. Render four chapter stills per clip with `node tools/tutorial-video/render.mjs --stills`; inspect transforms and poses with `npm.cmd --prefix tools/tutorial-video run inspect`. Evidence is written to ignored `docs/ui-preview/tutorial-revamp/`.
+To render selected scenes, use `node tools/tutorial-video/render.mjs painting photobooth`.
+Add `--stills` for chapter previews. Run `npm --prefix tools/tutorial-video run inspect`
+to check deterministic scene state without rendering videos.
 
-Timeline, captions and lighting live in `index.jsx`; procedural demonstrations and deterministic poses live in `scene.mjs`. The guide reuses the original landing character from `web/mascot.js`, injected with the renderer's own Three.js version. Chapter copy lives in `web/tutorial-catalog.js`. All animation is driven by Remotion's current frame. Edit the chapter copy before rendering so MP4 labels, captions and browser instructions remain synchronized.
+| File | Edit here for |
+| :-- | :-- |
+| `index.jsx` | Timeline, captions and lighting |
+| `scene.mjs` | Demonstrations and character poses |
+| `../../web/mascot.js` | Shared mascot geometry |
+| `../../web/tutorial-catalog.js` | Chapter copy and browser instructions |
 
-Each silent clip is 960 × 540, 30 fps, 12 seconds, with chapters at 0/3/6/9 seconds. Before rendering, the inspector samples 600 frames across the five scenes and checks camera framing, finite transforms, 3D finger joints, pinch contact, L directions, shape release, portrait depth and reproducible seeking. This inspects the actual Three.js scene; no Blender project or armature is involved. Rendering uses `.cache/tutorial-render/` and copies completed clips to `web/tutorials/` only after the selected batch finishes.
+Keep captions, rendered labels and tutorial controls synchronized. Intermediate
+files and previews remain local; completed MP4/JPEG/WebVTT assets are written to
+`web/tutorials/` after the selected batch succeeds.
 
-The renderer uses the root project's installed Playwright Chromium. Set `REMOTION_BROWSER_EXECUTABLE` to use another compatible Chromium executable. On native Windows ARM, Remotion's automatic browser/compositor discovery is unavailable. Windows' x64 emulation can run the official matching compositor:
+The renderer uses the installed Playwright Chromium. `REMOTION_BROWSER_EXECUTABLE`
+and `REMOTION_BINARIES_DIR` can select compatible, trusted local binaries. Native
+Windows ARM may require Remotion's matching Windows x64 compositor under emulation.
 
-```powershell
-New-Item -ItemType Directory -Force .cache/tutorial-compositor
-npm.cmd pack @remotion/compositor-win32-x64-msvc@4.0.539 --pack-destination .cache/tutorial-compositor
-tar.exe -xf .cache/tutorial-compositor/remotion-compositor-win32-x64-msvc-4.0.539.tgz -C .cache/tutorial-compositor
-npm.cmd run tutorials:render
-```
-
-Only the validated official version is used. The local cache is ignored. Other platforms use Remotion's matching compositor by default; `REMOTION_BINARIES_DIR` can explicitly select a compatible installed compositor. Never point it to untrusted binaries.
-
-The video source and generated artwork are original to EGZ. Third-party tooling retains its own licenses, including [Remotion's license](https://www.remotion.dev/license). The Zod override pins the patched version for transitive tooling; it is not part of the production application.
+Review [Remotion's license](https://www.remotion.dev/license) and the project's
+[third-party notices](../../THIRD_PARTY.md) before commercial rendering.

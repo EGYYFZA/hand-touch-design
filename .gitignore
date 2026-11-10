@@ -33,6 +33,7 @@ Thumbs.db
 
 # Reproducible local evidence, screenshots and session reports
 /docs/ui-preview/
+/docs/internal/
 /docs_preview.png
 /.ecc/
 /docs/egz-audit.md
@@ -57,6 +58,17 @@ Thumbs.db
 .pypirc
 .netrc
 /secrets/
+# Deployment-specific records and operator helpers stay on the maintainer's machine.
+/config/netlify-project.json
+/config/supabase-project.json
+/supabase/migrations/202610290002_egz_retention_schedule.sql
+/tools/operator-db.mjs
+/tools/supabase-db.mjs
+/tools/setup-retention.mjs
+/tools/cleanup-live-tests.mjs
+/tools/test-backend-live.mjs
+/tools/test-deployment.mjs
+/tools/test-deployment-browser.mjs
 credentials*.json
 service-account*.json
 *.pem
