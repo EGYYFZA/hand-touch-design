@@ -1,4 +1,4 @@
-<a href="https://egz-gesture-studio.netlify.app"><img src="docs/media/cover.png" alt="EGZ studio — a camera playground controlled by your hands" width="1280"></a>
+<a href="https://egz-gesture-studio.netlify.app"><img src="docs/media/cover.png" alt="EGZ studio live homepage with its original 3D mascot" width="1280"></a>
 
 # EGZ studio
 
