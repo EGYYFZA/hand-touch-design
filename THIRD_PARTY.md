@@ -1,71 +1,57 @@
-# Third-party materials
+# Licenses and assets
 
-The root MIT license covers project code and original generated UI/stickers.
-It does not relicense third-party libraries, pretrained weights, trademarks,
-or user photographs.
+The root [MIT License](LICENSE) covers project code and original EGZ artwork,
+including the procedural mascot, frame illustrations and repository cover.
+It does not relicense libraries, model weights, fonts, supplied images or trademarks.
 
-- Mona Sans variable font: GitHub and the Mona Sans Project Authors,
-  SIL Open Font License 1.1. Source: https://github.com/github/mona-sans
-  Revision: `4bc6ba8b354c36b4fb66d32cd67b4c1f2beb0a06`.
-  Unmodified `MonaSansVF[wdth,wght,opsz,ital].woff2` is hosted locally as
-  `web/fonts/mona-sans.woff2`; license: `licenses/Mona-Sans-OFL.txt`.
-  SHA256: `fd40288d051171b51e3d01f36790604470dbb4d4fc5b36ee5a8119f4f4c6b3e1`.
-  The EGZ spark mascot and frame illustrations are original project artwork.
-  GitHub Universe is a visual reference, not an affiliation or copied logo.
+## Libraries and tooling
 
-- MediaPipe Tasks Vision 0.10.35: Google / MediaPipe authors, Apache-2.0.
-  Source: https://github.com/google-ai-edge/mediapipe
-  npm: https://www.npmjs.com/package/@mediapipe/tasks-vision/v/0.10.35
-  License text: licenses/Apache-2.0.txt. The package's prebuilt JS/WASM is
-  copied unmodified by the build. Upstream package metadata identifies its
-  license; the tarball does not include a separate NOTICE file.
-- Hand model: https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task
-- Face model: https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task
-  These are unmodified Google pretrained model bundles, not project-created
-  assets and not covered by the project's MIT license. Consult their upstream
-  documentation/model cards and applicable Google terms before redistributing
-  modified models or representing ownership of them:
-  https://developers.google.com/edge/mediapipe/solutions/vision/hand_landmarker
-  https://developers.google.com/edge/mediapipe/solutions/vision/face_landmarker
-- Python dependencies retain their own package licenses. Install them from
-  requirements.txt; the virtual environment is not distributed in source builds.
-- Playwright is a development/test dependency under Apache-2.0. Its browser
-  downloads retain their respective Chromium/FFmpeg notices and are not shipped
-  in the static site.
+| Material | License / source |
+| :-- | :-- |
+| MediaPipe Tasks Vision 0.10.35 | [Apache-2.0](licenses/Apache-2.0.txt) · [source](https://github.com/google-ai-edge/mediapipe) |
+| Three.js 0.187.0 | MIT · [source](https://github.com/mrdoob/three.js) |
+| Supabase JavaScript client | MIT · [source](https://github.com/supabase/supabase-js) |
+| Sharp | Apache-2.0 · [source](https://github.com/lovell/sharp) |
+| Playwright | Apache-2.0 · [source](https://github.com/microsoft/playwright) |
+| OpenCV | Apache-2.0 · [source](https://github.com/opencv/opencv) |
+| Python dependencies | Respective package licenses; see `requirements.txt` and installed package notices |
 
-- Three.js 0.187.0: Three.js authors, MIT.
-  Source: https://github.com/mrdoob/three.js
-  Two unmodified browser ES modules are copied from the npm package
-  to `vendor/`; the upstream MIT text is published as `licenses/Three-MIT.txt`.
-  The landing mascot is original procedural artwork derived from the project's
-  existing spark illustration. Its poster is rendered from the same scene.
-  No remote model, texture, image-generation service or AI inference is used
-  by the public landing page.
+The build copies MediaPipe's runtime and the two Three.js browser modules
+unmodified from their npm packages. Three.js's MIT text is included in the built
+site as `licenses/Three-MIT.txt`. Playwright's browser/compositor downloads retain
+their upstream notices and are not shipped as website runtime files.
 
-- The isolated tutorial renderer uses Three.js 0.186.1 (MIT), React and
-  React Three Fiber (MIT), and Remotion 4.0.539 under its own license:
-  https://github.com/remotion-dev/remotion/blob/v4.0.539/LICENSE.md
-  Remotion is not covered by this repository's MIT license; check its terms
-  for your organization before commercial rendering. These dependencies are
-  local authoring tools, not part of the tutorial player. The five rendered
-  tutorials reuse the original EGZ mascot and synthetic example portraits;
-  no user photographs or downloaded character models are used.
+The tutorial authoring package uses Three.js 0.186.1, React and React Three Fiber
+(MIT), and [Remotion 4.0.539 under its own license](https://github.com/remotion-dev/remotion/blob/v4.0.539/LICENSE.md).
+Check Remotion's terms for your organization before commercial rendering.
+These tools are separate from the public tutorial player.
 
-Google's SDK privacy notice:
-https://developers.google.com/edge/mediapipe/solutions/tasks#mediapipe_tasks_privacy_notice
+## Font
 
-The web build hosts model and runtime files on the same origin. Its production
-Content-Security-Policy disallows external browser connections. Live video and
-landmarks stay on the device. The same-origin backend receives final captured
-PNGs only after account authentication and cloud consent, and stores them in
-private Supabase Storage. Guest/older photos additionally require the user's
-specific manual cloud-save action. See web/privacy.html.
+Mona Sans is by GitHub and the Mona Sans Project Authors, licensed under the
+[SIL Open Font License 1.1](licenses/Mona-Sans-OFL.txt).
+[Source revision](https://github.com/github/mona-sans/tree/4bc6ba8b354c36b4fb66d32cd67b4c1f2beb0a06):
+`web/fonts/mona-sans.woff2` is the unmodified variable font. GitHub Universe is a
+visual reference; EGZ is not affiliated with GitHub.
 
-The four monkey images in `web/memes/` are optimized WebP copies of the
-user-supplied originals in `.local-assets/original-memes/`, restored for the
-requested web experience. They are not generated project stickers and are not
-covered by the code's MIT license. Their original creator/license has not been
-recorded. The private originals remain excluded; the four WebP derivatives are
-included in the web build. No camera captures are included.
-Older public Git commits may still contain original images and camera captures;
-deleting files at HEAD does not remove them from history.
+## Pretrained models
+
+The unmodified [hand model](https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task)
+and [face model](https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task)
+are Google model bundles, separate from the project's MIT license. Review their
+[upstream documentation](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker)
+and applicable terms before redistributing modified weights or claiming ownership.
+
+## Images and privacy
+
+The landing posters, photobooth decorations and mascot-led tutorials are original
+EGZ artwork. Tutorial portraits are synthetic; no visitor photographs are included.
+The website QR contains only the direct public studio URL.
+
+The four monkey images in `web/memes/` are supplied images. Their original creator
+and redistribution license have **not been verified**. They are excluded from the
+MIT grant: obtain permission or replace them before redistributing those images.
+
+Camera processing and new photos stay on the device in the default studio.
+See the [privacy policy](https://egz-gesture-studio.netlify.app/privacy) and
+[MediaPipe's SDK privacy notice](https://ai.google.dev/edge/mediapipe/solutions/tasks#mediapipe_tasks_privacy_notice).

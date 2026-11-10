@@ -1,39 +1,23 @@
 # Contributing
 
-Use a short feature branch and a pull request against main. Keep camera frames,
-captures, credentials, local printer previews and virtual environments out of Git.
-Only contribute assets you created or have permission to redistribute, with their
-license and source recorded in THIRD_PARTY.md.
+Small, focused changes are welcome. For a bug report, include your browser/OS,
+steps to reproduce, and what you expected. Use a synthetic example rather than a
+personal camera image. Report security issues [privately](SECURITY.md).
 
-## Desktop
+## Before opening a pull request
 
-Use Python 3.12 and install requirements.txt in a virtual environment:
+1. Create a branch from `main` and keep the change focused on one issue.
+2. Follow the surrounding code; add a regression check for changed behavior.
+3. Run the relevant checks in the [development guide](docs/development.md).
+4. Describe the change, how you checked it, and any hardware checks not performed.
 
-```text
-python -m unittest discover -s tests -v
-```
+Use clear commit titles such as `fix: preserve photos after a camera disconnect`.
+For UI changes, verify keyboard access, small screens and reduced motion. Preserve
+click/touch alternatives to gesture controls.
 
-Tests simulate camera failures and printing; they do not send anything to a
-physical printer. The real camera/printer path still needs a manual check.
+Only contribute media you created or have permission to redistribute. Record
+third-party sources and licenses in [THIRD_PARTY.md](THIRD_PARTY.md).
 
-## Browser
-
-Use Node.js 22 or newer (Windows PowerShell: use npm.cmd if npm.ps1 is blocked).
-
-```text
-npm ci --ignore-scripts
-npm test
-npm run build
-npx playwright install chromium
-npm run test:e2e
-npm run dev
-```
-
-The build publishes only dist/. Do not add an API that accepts photographs
-without a separate privacy/security review. Preserve the same-origin model
-delivery and CSP. Keep button/keyboard alternatives to gesture controls.
-
-Commit messages use feat:, fix:, test:, docs:, ci:, or chore:. Include test
-results for UI changes and disclose hardware checks not run. Generate screenshots
-locally; do not commit them or attach camera images, traces, or personal data to
-public PRs. See SECURITY.md for the repository file policy.
+Do not include secrets, personal photos, local setup files, generated test output
+or operational reports. Check the staged diff before pushing. The build publishes
+only its explicit public-asset allowlist; keep that boundary intact.

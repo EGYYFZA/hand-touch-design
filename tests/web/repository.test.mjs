@@ -25,9 +25,15 @@ test('private outputs are ignored while runtime assets and safe templates remain
     '.agents/session.json', '.netlify/state.json', '.npmrc', 'credentials-production.json', 'service-account-prod.json',
     'secrets/config.json', 'signing.key', 'client.p12', 'private.pem', 'browser.har',
     'photo.print.html', '.venv/pyvenv.cfg', 'node_modules/example/index.js',
-    'dist/index.html', 'test-results/trace.zip', 'playwright-report/index.html'];
+    'dist/index.html', 'test-results/trace.zip', 'playwright-report/index.html',
+    'docs/internal/notes.md', 'config/netlify-project.json', 'config/supabase-project.json',
+    'supabase/migrations/202610290002_egz_retention_schedule.sql', 'tools/operator-db.mjs',
+    'tools/supabase-db.mjs', 'tools/setup-retention.mjs', 'tools/cleanup-live-tests.mjs',
+    'tools/test-backend-live.mjs', 'tools/test-deployment.mjs', 'tools/test-deployment-browser.mjs'];
   assert.deepEqual(ignored(privatePaths), privatePaths);
   assert.deepEqual(ignored(['.env.example', '.env.sample', 'package-lock.json', 'config/settings.yaml',
     'models/hand_landmarker.task', 'models/face_landmarker.task', 'web/memes/idea.webp',
-    'web/app.js', '.github/workflows/checks.yml', 'tests/web/repository.test.mjs']), []);
+    'web/app.js', '.github/workflows/checks.yml', 'tests/web/repository.test.mjs',
+    'docs/media/cover.png', 'docs/media/website-qr.png', 'docs/README.md',
+    'supabase/examples/retention-schedule.sql.example']), []);
 });

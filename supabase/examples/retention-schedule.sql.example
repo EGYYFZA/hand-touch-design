@@ -12,7 +12,7 @@ begin
   select decrypted_secret into v_job_secret from vault.decrypted_secrets where name = 'egz_retention_job_secret';
   if v_secret is null or v_job_secret is null then raise exception 'EGZ retention credential not configured'; end if;
   select net.http_post(
-    url := 'https://chznehpvkuuooclyjhqg.supabase.co/functions/v1/egz-retention',
+    url := 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/egz-retention',
     headers := jsonb_build_object('Content-Type','application/json','Authorization','Bearer ' || v_secret,'X-EGZ-Retention-Secret',v_job_secret),
     body := '{}'::jsonb, timeout_milliseconds := 10000
   ) into v_request;

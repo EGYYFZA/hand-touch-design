@@ -47,10 +47,9 @@ then creates the destination exclusively. The target cannot write the destinatio
 Regression tests reject symlinks, hard links, FIFOs, oversized files, traversal
 and overwrites. Raw target directories are never copied back.
 
-This closes the execution-isolation gap for these fixtures. It is partial security
-coverage, not proof of a full penetration test or of live database authorization.
-The previous full source-audit report remains incomplete; its broader coverage
-ledger and independent verification are not replaced by a passing CI job.
+These fixtures cover the listed local API boundaries. A passing job does not
+establish a full penetration test or validate a deployed database's authorization
+policies. Test those separately on an isolated instance with dummy principals.
 
 References: [Docker network isolation](https://docs.docker.com/engine/network/drivers/none/),
 [resource limits](https://docs.docker.com/engine/containers/resource_constraints/),
